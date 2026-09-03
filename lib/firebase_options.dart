@@ -48,17 +48,17 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDNmhmn3DeJFv8ykwIhRYkaC1RBNQ0IU4g',
-    appId: '1:151484642614:android:a63a1a22e28e4f10d72f97',
+    appId: '1:151484642614:android:0f87cc80230cd8bed72f97',
     messagingSenderId: '151484642614',
     projectId: 'vagabond-7897a',
     storageBucket: 'vagabond-7897a.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDc0gRspC25r6AKhD2a75_YH97VjP1GPkA',
-    appId: '1:151484642614:ios:ffba59cffa633d0bd72f97',
+    appId: '1:151484642614:ios:b9cfabd64b42ff4dd72f97',
     messagingSenderId: '151484642614',
     projectId: 'vagabond-7897a',
     storageBucket: 'vagabond-7897a.firebasestorage.app',
-    iosBundleId: 'com.vagabond.app',
+    iosBundleId: 'app.vagabond.com',
   );
 }

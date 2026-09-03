@@ -1,4 +1,4 @@
-package com.vagabond.app
+package app.vagabond.com
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -6,7 +6,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-  private val channel: String = "com.vagabond.app/config"
+  private val channel: String = "app.vagabond.com/config"
 
   override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
     super.configureFlutterEngine(flutterEngine)

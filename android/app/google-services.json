@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:151484642614:android:a63a1a22e28e4f10d72f97",
+        "mobilesdk_app_id": "1:151484642614:android:0f87cc80230cd8bed72f97",
         "android_client_info": {
-          "package_name": "com.vagabond.app"
+          "package_name": "app.vagabond.com"
         }
       },
       "oauth_client": [],

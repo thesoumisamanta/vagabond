@@ -46,7 +46,7 @@ void main() async {
     ),
   );
 
-  const MethodChannel channel = MethodChannel("com.vagabond.app/config");
+  const MethodChannel channel = MethodChannel("app.vagabond.com/config");
   final String? baseUrl = await channel.invokeMethod("getBaseUrl");
   ApiEndpoints.baseUrl = baseUrl ?? '';
 
