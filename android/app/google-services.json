@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "151484642614",
+    "project_id": "vagabond-7897a",
+    "storage_bucket": "vagabond-7897a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:151484642614:android:a63a1a22e28e4f10d72f97",
+        "android_client_info": {
+          "package_name": "com.vagabond.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNmhmn3DeJFv8ykwIhRYkaC1RBNQ0IU4g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
