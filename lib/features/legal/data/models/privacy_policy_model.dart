@@ -1,19 +1,29 @@
+import 'package:vagabond/features/legal/data/models/legal_section_model.dart';
 import 'package:vagabond/features/legal/domain/entities/privacy_policy.dart';
 
 class PrivacyPolicyModel extends PrivacyPolicy {
   const PrivacyPolicyModel({
     required super.title,
     required super.effectiveDate,
+    super.lastUpdated,
     required super.version,
-    required super.content,
+    super.introduction,
+    required super.sections,
   });
 
   factory PrivacyPolicyModel.fromJson(Map<String, dynamic> json) {
+    final contentJson = json['content'] as Map<String, dynamic>?;
+    final sectionsJson = json['sections'] as List<dynamic>? ?? [];
+
     return PrivacyPolicyModel(
       title: json['title'] ?? '',
       effectiveDate: json['effectiveDate'] ?? '',
+      lastUpdated: json['lastUpdated'] as String?,
       version: json['version'] ?? '',
-      content: PrivacyPolicyContentModel.fromJson(json['content'] ?? {}),
+      introduction: contentJson?['introduction'] as String?,
+      sections: sectionsJson
+          .map((s) => LegalSectionModel.fromJson(s as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -21,35 +31,14 @@ class PrivacyPolicyModel extends PrivacyPolicy {
     return {
       'title': title,
       'effectiveDate': effectiveDate,
+      'lastUpdated': lastUpdated,
       'version': version,
-      'content': (content as PrivacyPolicyContentModel).toJson(),
-    };
-  }
-}
-
-class PrivacyPolicyContentModel extends PrivacyPolicyContent {
-  const PrivacyPolicyContentModel({
-    required super.informationCollected,
-    required super.howWeUseInformation,
-    required super.thirdPartyServices,
-    required super.dataRights,
-  });
-
-  factory PrivacyPolicyContentModel.fromJson(Map<String, dynamic> json) {
-    return PrivacyPolicyContentModel(
-      informationCollected: List<String>.from(json['informationCollected'] ?? []),
-      howWeUseInformation: List<String>.from(json['howWeUseInformation'] ?? []),
-      thirdPartyServices: List<String>.from(json['thirdPartyServices'] ?? []),
-      dataRights: json['dataRights'] ?? '',
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'informationCollected': informationCollected,
-      'howWeUseInformation': howWeUseInformation,
-      'thirdPartyServices': thirdPartyServices,
-      'dataRights': dataRights,
+      'content': {
+        if (introduction != null) 'introduction': introduction,
+      },
+      'sections': sections
+          .map((s) => (s as LegalSectionModel).toJson())
+          .toList(),
     };
   }
 }
