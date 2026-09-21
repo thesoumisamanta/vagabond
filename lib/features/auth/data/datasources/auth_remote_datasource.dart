@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:vagabond/core/network/api_client.dart';
 import 'package:vagabond/core/network/api_endpoints.dart';
 import 'package:vagabond/features/auth/data/models/user_model.dart';
@@ -24,6 +26,17 @@ abstract class AuthRemoteDataSource {
   Future<Map<String, dynamic>> changePassword({required String oldPassword, required String newPassword});
 
   Future<Map<String, dynamic>> updatePrivacySettings({required bool isPrivate});
+
+  Future<UserModel> updateProfile({
+    File? profilePicture,
+    File? coverPhoto,
+    String? fullName,
+    String? bio,
+    String? location,
+    String? website,
+    String? businessEmail,
+    bool? isPrivate,
+  });
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -101,5 +114,56 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<Map<String, dynamic>> updatePrivacySettings({required bool isPrivate}) async {
     final response = await apiClient.put(ApiEndpoints.updatePrivacySettings, data: {'isPrivate': isPrivate});
     return response.data as Map<String, dynamic>;
+  }
+
+  @override
+  Future<UserModel> updateProfile({
+    File? profilePicture,
+    File? coverPhoto,
+    String? fullName,
+    String? bio,
+    String? location,
+    String? website,
+    String? businessEmail,
+    bool? isPrivate,
+  }) async {
+    final formData = FormData();
+
+    if (profilePicture != null) {
+      final filename = profilePicture.path.split('/').last;
+      formData.files.add(
+        MapEntry('profilePicture', await MultipartFile.fromFile(profilePicture.path, filename: filename)),
+      );
+    }
+    if (coverPhoto != null) {
+      final filename = coverPhoto.path.split('/').last;
+      formData.files.add(
+        MapEntry('coverPhoto', await MultipartFile.fromFile(coverPhoto.path, filename: filename)),
+      );
+    }
+    if (fullName != null) {
+      formData.fields.add(MapEntry('fullName', fullName.trim()));
+    }
+    if (bio != null) {
+      formData.fields.add(MapEntry('bio', bio.trim()));
+    }
+    if (location != null) {
+      formData.fields.add(MapEntry('location', location.trim()));
+    }
+    if (website != null) {
+      formData.fields.add(MapEntry('website', website.trim()));
+    }
+    if (businessEmail != null) {
+      formData.fields.add(MapEntry('businessEmail', businessEmail.trim()));
+    }
+    if (isPrivate != null) {
+      formData.fields.add(MapEntry('isPrivate', isPrivate.toString()));
+    }
+
+    final response = await apiClient.put(ApiEndpoints.updateProfile, data: formData);
+    final responseData = response.data as Map<String, dynamic>;
+    final data = responseData['data'] as Map<String, dynamic>;
+    final userJson = data['user'] as Map<String, dynamic>;
+    return UserModel.fromJson(userJson);
   }
 }

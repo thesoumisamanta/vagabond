@@ -65,3 +65,10 @@ class AuthUpdatePrivacySettingsSuccess extends AuthState {
 
   const AuthUpdatePrivacySettingsSuccess({required this.message, required this.isPrivate});
 }
+
+class AuthUpdateProfileSuccess extends AuthState {
+  final User user;
+  final String message;
+
+  const AuthUpdateProfileSuccess({required this.user, this.message = 'Profile updated successfully'});
+}

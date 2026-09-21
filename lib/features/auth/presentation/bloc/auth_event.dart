@@ -1,3 +1,5 @@
+import 'dart:io';
+
 abstract class AuthEvent {
   const AuthEvent();
 }
@@ -57,4 +59,26 @@ class UpdatePrivacySettingsRequested extends AuthEvent {
   final bool isPrivate;
 
   const UpdatePrivacySettingsRequested({required this.isPrivate});
+}
+
+class UpdateProfileRequested extends AuthEvent {
+  final File? profilePicture;
+  final File? coverPhoto;
+  final String? fullName;
+  final String? bio;
+  final String? location;
+  final String? website;
+  final String? businessEmail;
+  final bool? isPrivate;
+
+  const UpdateProfileRequested({
+    this.profilePicture,
+    this.coverPhoto,
+    this.fullName,
+    this.bio,
+    this.location,
+    this.website,
+    this.businessEmail,
+    this.isPrivate,
+  });
 }

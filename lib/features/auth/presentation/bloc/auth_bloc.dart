@@ -19,6 +19,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<DeleteAccountRequested>(_onDeleteAccountRequested);
     on<ChangePasswordRequested>(_onChangePasswordRequested);
     on<UpdatePrivacySettingsRequested>(_onUpdatePrivacySettingsRequested);
+    on<UpdateProfileRequested>(_onUpdateProfileRequested);
   }
 
   Future<void> _onRegisterRequested(RegisterRequested event, Emitter<AuthState> emit) async {
@@ -130,6 +131,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         currentUser = currentUser!.copyWith(isPrivate: event.isPrivate);
       }
       emit(AuthUpdatePrivacySettingsSuccess(message: message, isPrivate: event.isPrivate));
+    } catch (e) {
+      emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  Future<void> _onUpdateProfileRequested(UpdateProfileRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      final updatedUser = await authRepository.updateProfile(
+        profilePicture: event.profilePicture,
+        coverPhoto: event.coverPhoto,
+        fullName: event.fullName,
+        bio: event.bio,
+        location: event.location,
+        website: event.website,
+        businessEmail: event.businessEmail,
+        isPrivate: event.isPrivate,
+      );
+      currentUser = updatedUser;
+      emit(AuthUpdateProfileSuccess(user: updatedUser));
     } catch (e) {
       emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
     }

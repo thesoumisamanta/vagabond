@@ -16,6 +16,7 @@ class ApiEndpoints {
   static const String stories = 'stories';
   static const String followingStories = 'stories/following';
   static const String updatePrivacySettings = 'users/settings/privacy';
+  static const String updateProfile = 'users/profile';
   static const String chats = 'chats';
   static const String notifications = 'notifications';
 }

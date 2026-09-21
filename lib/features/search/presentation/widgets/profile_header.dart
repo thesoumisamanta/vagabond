@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:vagabond/features/auth/domain/entities/user.dart';
 import 'package:vagabond/core/constants/app_strings.dart';
@@ -10,6 +11,7 @@ class ProfileHeader extends StatelessWidget {
   final bool isSelf;
   final VoidCallback onFollowToggle;
   final VoidCallback onMessageTap;
+  final VoidCallback? onEditProfileTap;
 
   const ProfileHeader({
     super.key,
@@ -18,6 +20,7 @@ class ProfileHeader extends StatelessWidget {
     required this.isSelf,
     required this.onFollowToggle,
     required this.onMessageTap,
+    this.onEditProfileTap,
   });
 
   @override
@@ -102,25 +105,90 @@ class ProfileHeader extends StatelessWidget {
                 Text(user.bio, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, height: 1.4)),
               ],
               const SizedBox(height: 16),
-              if (user.location.isNotEmpty || user.website.isNotEmpty) ...[
-                Row(
+              if (user.location.isNotEmpty || user.website.isNotEmpty || user.businessEmail.isNotEmpty) ...[
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
                   children: [
-                    if (user.location.isNotEmpty) ...[
-                      Icon(Icons.location_on_outlined, color: Colors.white.withOpacity(0.5), size: 16),
-                      const SizedBox(width: 4),
-                      Text(user.location, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13)),
-                      const SizedBox(width: 16),
-                    ],
-                    if (user.website.isNotEmpty) ...[
-                      Icon(Icons.link, color: Colors.white.withOpacity(0.5), size: 16),
-                      const SizedBox(width: 4),
-                      Text(user.website, style: const TextStyle(color: Color(0xFF6366F1), fontSize: 13)),
-                    ],
+                    if (user.location.isNotEmpty)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.location_on_outlined, color: Colors.white.withOpacity(0.5), size: 16),
+                          const SizedBox(width: 4),
+                          Text(user.location, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13)),
+                        ],
+                      ),
+                    if (user.website.isNotEmpty)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.link, color: Colors.white.withOpacity(0.5), size: 16),
+                          const SizedBox(width: 4),
+                          Text(user.website, style: const TextStyle(color: Color(0xFF6366F1), fontSize: 13)),
+                        ],
+                      ),
+                    if (user.businessEmail.isNotEmpty)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.email_outlined, color: Colors.white.withOpacity(0.5), size: 16),
+                          const SizedBox(width: 4),
+                          Text(user.businessEmail, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13)),
+                        ],
+                      ),
                   ],
                 ),
               ],
               const SizedBox(height: 20),
-              if (!isSelf) ...[
+              if (isSelf) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6366F1).withOpacity(0.85),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white.withOpacity(0.1)),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: onEditProfileTap ?? () => context.push('/edit-profile'),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12.0),
+                                  child: Center(
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.edit_outlined, color: Colors.white, size: 16),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Edit Profile',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ] else ...[
                 Row(
                   children: [
                     Expanded(
@@ -177,9 +245,9 @@ class ProfileHeader extends StatelessWidget {
                               color: Colors.transparent,
                               child: InkWell(
                                 onTap: onMessageTap,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                                  child: const Center(
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12.0),
+                                  child: Center(
                                     child: Text(
                                       'Message',
                                       style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),

@@ -163,6 +163,7 @@ class AppStrings {
 
   // Post Strings
   static const String postMaxMediaError = 'You can only add up to 10 media files.';
+  static const String postMaxFileSizeError = 'File size exceeds the 10 MB limit.';
   static const String postCreateTitle = 'Create Post';
   static const String postButton = 'Post';
   static const String postCaptionLabel = 'Caption';

@@ -10,6 +10,7 @@ import 'package:vagabond/features/auth/presentation/screens/delete_account_scree
 import 'package:vagabond/features/auth/presentation/screens/change_password_screen.dart';
 import 'package:vagabond/features/auth/presentation/screens/settings_screen.dart';
 import 'package:vagabond/features/auth/presentation/screens/privacy_settings_screen.dart';
+import 'package:vagabond/features/auth/presentation/screens/edit_profile_screen.dart';
 import 'package:vagabond/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:vagabond/features/legal/presentation/screens/privacy_policy_screen.dart';
 import 'package:vagabond/features/legal/presentation/screens/terms_and_conditions_screen.dart';
@@ -56,6 +57,7 @@ GoRouter appRouter(FirebaseAnalyticsObserver observer) => GoRouter(
     GoRoute(path: '/change-password', builder: (context, state) => const ChangePasswordScreen()),
     GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
     GoRoute(path: '/privacy-settings', builder: (context, state) => const PrivacySettingsScreen()),
+    GoRoute(path: '/edit-profile', builder: (context, state) => const EditProfileScreen()),
     GoRoute(path: '/privacy-policy', builder: (context, state) => const PrivacyPolicyScreen()),
     GoRoute(path: '/terms-and-conditions', builder: (context, state) => const TermsAndConditionsScreen()),
     GoRoute(path: '/add-post', builder: (context, state) => const AddPostScreen()),

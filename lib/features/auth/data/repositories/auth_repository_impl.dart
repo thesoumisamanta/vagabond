@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:vagabond/core/network/api_client.dart';
 import 'package:vagabond/core/services/storage_service.dart';
 import 'package:vagabond/features/auth/domain/entities/login_result.dart';
@@ -130,6 +131,35 @@ class AuthRepositoryImpl implements AuthRepository {
       final response = await remoteDataSource.updatePrivacySettings(isPrivate: isPrivate);
       await getProfile();
       return response['message'] as String? ?? 'Account settings updated successfully';
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<User> updateProfile({
+    File? profilePicture,
+    File? coverPhoto,
+    String? fullName,
+    String? bio,
+    String? location,
+    String? website,
+    String? businessEmail,
+    bool? isPrivate,
+  }) async {
+    try {
+      final user = await remoteDataSource.updateProfile(
+        profilePicture: profilePicture,
+        coverPhoto: coverPhoto,
+        fullName: fullName,
+        bio: bio,
+        location: location,
+        website: website,
+        businessEmail: businessEmail,
+        isPrivate: isPrivate,
+      );
+      await storageService.saveUserProfile(user);
+      return user;
     } catch (e) {
       rethrow;
     }
