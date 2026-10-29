@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -25,8 +26,43 @@ class _ResetOtpScreenState extends State<ResetOtpScreen> {
   final _focusNode = FocusNode();
   final _formKey = GlobalKey<FormState>();
 
+  Timer? _timer;
+  int _secondsRemaining = 120; // 2 minutes countdown
+  bool get _canResend => _secondsRemaining == 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    _timer?.cancel();
+    setState(() {
+      _secondsRemaining = 120;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  String _formatDuration(int totalSeconds) {
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    final minStr = minutes.toString().padLeft(2, '0');
+    final secStr = seconds.toString().padLeft(2, '0');
+    return '$minStr:$secStr';
+  }
+
   @override
   void dispose() {
+    _timer?.cancel();
     _pinController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -60,6 +96,9 @@ class _ResetOtpScreenState extends State<ResetOtpScreen> {
           context.push(
             '/reset-password?email=${Uri.encodeComponent(state.email)}&otp=${Uri.encodeComponent(state.otp)}',
           );
+        } else if (state is AuthForgotPasswordSuccess) {
+          CustomSnackBar.showSuccess(context, state.message);
+          _startCountdown();
         } else if (state is AuthFailure) {
           CustomSnackBar.showError(context, state.error);
         }
@@ -148,17 +187,31 @@ class _ResetOtpScreenState extends State<ResetOtpScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(AppStrings.resetOtpDidNotReceive, style: TextStyle(color: Colors.white.withOpacity(0.6))),
-                                    GestureDetector(
-                                      onTap: () {
-                                        context.read<AuthBloc>().add(
-                                          ForgotPasswordRequested(email: widget.email),
-                                        );
-                                      },
-                                      child: const Text(
-                                        AppStrings.resetOtpResendLink,
-                                        style: TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold),
+                                    if (_canResend)
+                                      GestureDetector(
+                                        onTap: isLoading
+                                            ? null
+                                            : () {
+                                                context.read<AuthBloc>().add(
+                                                  ForgotPasswordRequested(email: widget.email),
+                                                );
+                                              },
+                                        child: const Text(
+                                          AppStrings.resetOtpResendLink,
+                                          style: TextStyle(
+                                            color: Color(0xFF6366F1),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      Text(
+                                        'Resend in ${_formatDuration(_secondsRemaining)}',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.4),
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
-                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 16),

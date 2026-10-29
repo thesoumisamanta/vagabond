@@ -12,6 +12,7 @@ abstract class AuthRepository {
     required String accountType,
   });
   Future<String> verifyOtp({required String email, required String otp});
+  Future<String> resendOtp({required String email});
   Future<User> getProfile();
   Future<void> logout();
   Future<void> deleteAccount({required String password});

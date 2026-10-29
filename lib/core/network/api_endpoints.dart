@@ -4,6 +4,7 @@ class ApiEndpoints {
   static String baseUrl = '';
   static const String register = 'auth/register';
   static const String verifyOtp = 'auth/verify-email-otp';
+  static const String resendOtp = 'auth/resend-email-otp';
   static const String login = 'auth/login';
   static const String me = 'auth/me';
   static const String logout = 'auth/logout';

@@ -99,6 +99,16 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<String> resendOtp({required String email}) async {
+    try {
+      final response = await remoteDataSource.resendOtp(email: email);
+      return response['message'] as String? ?? 'OTP resent successfully';
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
   Future<User> getProfile() async {
     try {
       final user = await remoteDataSource.getProfile();

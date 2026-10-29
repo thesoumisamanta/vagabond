@@ -26,6 +26,12 @@ class AuthVerifyOtpSuccess extends AuthState {
   const AuthVerifyOtpSuccess({required this.message});
 }
 
+class AuthResendOtpSuccess extends AuthState {
+  final String message;
+
+  const AuthResendOtpSuccess({required this.message});
+}
+
 class AuthLoginRequiresVerification extends AuthState {
   final String email;
   final String message;

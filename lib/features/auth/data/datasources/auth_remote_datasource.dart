@@ -18,6 +18,10 @@ abstract class AuthRemoteDataSource {
     required String otp,
   });
 
+  Future<Map<String, dynamic>> resendOtp({
+    required String email,
+  });
+
   Future<Map<String, dynamic>> login({
     required String emailOrUsername,
     required String password,
@@ -92,6 +96,17 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     final response = await apiClient.post(
       ApiEndpoints.verifyOtp,
       data: {'email': email, 'otp': otp},
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  @override
+  Future<Map<String, dynamic>> resendOtp({
+    required String email,
+  }) async {
+    final response = await apiClient.post(
+      ApiEndpoints.resendOtp,
+      data: {'email': email},
     );
     return response.data as Map<String, dynamic>;
   }

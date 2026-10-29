@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -25,8 +26,43 @@ class _OtpScreenState extends State<OtpScreen> {
   final _focusNode = FocusNode();
   final _formKey = GlobalKey<FormState>();
 
+  Timer? _timer;
+  int _secondsRemaining = 120; // 2 minutes countdown
+  bool get _canResend => _secondsRemaining == 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    _timer?.cancel();
+    setState(() {
+      _secondsRemaining = 120;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  String _formatDuration(int totalSeconds) {
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    final minStr = minutes.toString().padLeft(2, '0');
+    final secStr = seconds.toString().padLeft(2, '0');
+    return '$minStr:$secStr';
+  }
+
   @override
   void dispose() {
+    _timer?.cancel();
     _pinController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -58,6 +94,9 @@ class _OtpScreenState extends State<OtpScreen> {
         if (state is AuthVerifyOtpSuccess) {
           CustomSnackBar.showSuccess(context, state.message);
           context.go('/login');
+        } else if (state is AuthResendOtpSuccess) {
+          CustomSnackBar.showSuccess(context, state.message);
+          _startCountdown();
         } else if (state is AuthFailure) {
           CustomSnackBar.showError(context, state.error);
         }
@@ -130,15 +169,31 @@ class _OtpScreenState extends State<OtpScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(AppStrings.otpDidNotReceive, style: TextStyle(color: Colors.white.withOpacity(0.6))),
-                              GestureDetector(
-                                onTap: () {
-                                  // Resend OTP action
-                                },
-                                child: const Text(
-                                  AppStrings.otpResendLink,
-                                  style: TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold),
+                              if (_canResend)
+                                GestureDetector(
+                                  onTap: isLoading
+                                      ? null
+                                      : () {
+                                          context.read<AuthBloc>().add(
+                                            ResendOtpRequested(email: widget.email),
+                                          );
+                                        },
+                                  child: const Text(
+                                    AppStrings.otpResendLink,
+                                    style: TextStyle(
+                                      color: Color(0xFF6366F1),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Text(
+                                  'Resend in ${_formatDuration(_secondsRemaining)}',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.4),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                           const SizedBox(height: 16),

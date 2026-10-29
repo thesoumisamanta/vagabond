@@ -19,6 +19,24 @@ class StoriesRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = context.watch<AuthBloc>().currentUser;
 
+    // Check if the current user has active stories in the loaded story list
+    UserStories? myUserStory;
+    List<UserStories> followingStories = [];
+
+    if (state is StoryLoaded) {
+      final allUserStories = (state as StoryLoaded).userStories;
+      for (final us in allUserStories) {
+        if (user != null && us.user.id == user.id) {
+          myUserStory = us;
+        } else {
+          followingStories.add(us);
+        }
+      }
+    }
+
+    final hasOwnStories = myUserStory != null && myUserStory.stories.isNotEmpty;
+    final hasUnviewedOwnStories = hasOwnStories && myUserStory!.stories.any((s) => !s.hasViewed);
+
     return Container(
       height: 104,
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -26,51 +44,92 @@ class StoriesRow extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          // Current user's "Add Story" item
-          GestureDetector(
-            onTap: () async {
-              final result = await context.push('/create-story');
-              if (result == true && context.mounted) {
-                context.read<StoryBloc>().add(const GetFollowingStoriesRequested());
-              }
-            },
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
+          // Current user's avatar (Instagram style: shows story if exists, or plus badge to add)
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: GestureDetector(
+              onTap: () async {
+                if (hasOwnStories) {
+                  _showStoryViewer(context, myUserStory!);
+                } else {
+                  final result = await context.push('/create-story');
+                  if (result == true && context.mounted) {
+                    context.read<StoryBloc>().add(const GetFollowingStoriesRequested());
+                  }
+                }
+              },
               child: Column(
                 children: [
                   Stack(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(2),
+                        padding: const EdgeInsets.all(2.5),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+                          gradient: hasOwnStories
+                              ? (hasUnviewedOwnStories
+                                  ? const LinearGradient(
+                                      colors: [
+                                        Color(0xFF818CF8), // Indigo 400
+                                        Color(0xFFC084FC), // Purple 400
+                                        Color(0xFFF472B6), // Pink 400
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null)
+                              : null,
+                          border: hasOwnStories
+                              ? (!hasUnviewedOwnStories
+                                  ? Border.all(color: Colors.white.withOpacity(0.25), width: 1.5)
+                                  : null)
+                              : Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
                         ),
-                        child: CircleAvatar(
-                          radius: 28,
-                          backgroundColor: const Color(0xFF6366F1).withOpacity(0.2),
-                          backgroundImage: user != null && user.profilePictureUrl.isNotEmpty
-                              ? NetworkImage(user.profilePictureUrl)
+                        child: Container(
+                          padding: hasOwnStories ? const EdgeInsets.all(2) : EdgeInsets.zero,
+                          decoration: hasOwnStories
+                              ? const BoxDecoration(color: Color(0xFF0F172A), shape: BoxShape.circle)
                               : null,
-                          child: user == null || user.profilePictureUrl.isEmpty
-                              ? Text(
-                                  user != null && user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'U',
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : null,
+                          child: CircleAvatar(
+                            radius: hasOwnStories ? 26 : 28,
+                            backgroundColor: const Color(0xFF6366F1).withOpacity(0.2),
+                            backgroundImage: user != null && user.profilePictureUrl.isNotEmpty
+                                ? CachedNetworkImageProvider(user.profilePictureUrl)
+                                : null,
+                            child: user == null || user.profilePictureUrl.isEmpty
+                                ? Text(
+                                    user != null && user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'U',
+                                    style: TextStyle(
+                                      fontSize: hasOwnStories ? 18 : 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : null,
+                          ),
                         ),
                       ),
+                      // Plus badge to add a new story
                       Positioned(
                         bottom: 0,
                         right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(color: Color(0xFF6366F1), shape: BoxShape.circle),
-                          child: const Icon(Icons.add, color: Colors.white, size: 14),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () async {
+                            final result = await context.push('/create-story');
+                            if (result == true && context.mounted) {
+                              context.read<StoryBloc>().add(const GetFollowingStoriesRequested());
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6366F1),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFF0F172A), width: 2),
+                            ),
+                            child: const Icon(Icons.add, color: Colors.white, size: 13),
+                          ),
                         ),
                       ),
                     ],
@@ -109,7 +168,7 @@ class StoriesRow extends StatelessWidget {
               ),
             )
           else if (state is StoryLoaded) ...[
-            ...((state as StoryLoaded).userStories).map((userStory) {
+            ...followingStories.map((userStory) {
               final hasUnviewed = userStory.stories.any((s) => !s.hasViewed);
               return Padding(
                 padding: const EdgeInsets.only(right: 16),

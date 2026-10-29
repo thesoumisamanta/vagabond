@@ -27,6 +27,12 @@ class VerifyOtpRequested extends AuthEvent {
   const VerifyOtpRequested({required this.email, required this.otp});
 }
 
+class ResendOtpRequested extends AuthEvent {
+  final String email;
+
+  const ResendOtpRequested({required this.email});
+}
+
 class LoginRequested extends AuthEvent {
   final String emailOrUsername;
   final String password;

@@ -13,6 +13,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({required this.authRepository, required this.storageService}) : super(AuthInitial()) {
     on<RegisterRequested>(_onRegisterRequested);
     on<VerifyOtpRequested>(_onVerifyOtpRequested);
+    on<ResendOtpRequested>(_onResendOtpRequested);
     on<LoginRequested>(_onLoginRequested);
     on<AppStarted>(_onAppStarted);
     on<LogoutRequested>(_onLogoutRequested);
@@ -46,6 +47,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final message = await authRepository.verifyOtp(email: event.email, otp: event.otp);
       emit(AuthVerifyOtpSuccess(message: message));
+    } catch (e) {
+      emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  Future<void> _onResendOtpRequested(ResendOtpRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      final message = await authRepository.resendOtp(email: event.email);
+      emit(AuthResendOtpSuccess(message: message));
     } catch (e) {
       emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
     }
