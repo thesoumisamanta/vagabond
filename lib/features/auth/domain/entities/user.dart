@@ -9,6 +9,7 @@ class User {
   final String coverPhotoUrl;
   final String location;
   final String website;
+  final String businessEmail;
   final int followersCount;
   final int followingCount;
   final int postsCount;
@@ -28,6 +29,7 @@ class User {
     required this.coverPhotoUrl,
     required this.location,
     required this.website,
+    this.businessEmail = '',
     required this.followersCount,
     required this.followingCount,
     required this.postsCount,
@@ -48,6 +50,7 @@ class User {
     String? coverPhotoUrl,
     String? location,
     String? website,
+    String? businessEmail,
     int? followersCount,
     int? followingCount,
     int? postsCount,
@@ -67,6 +70,7 @@ class User {
       coverPhotoUrl: coverPhotoUrl ?? this.coverPhotoUrl,
       location: location ?? this.location,
       website: website ?? this.website,
+      businessEmail: businessEmail ?? this.businessEmail,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
       postsCount: postsCount ?? this.postsCount,

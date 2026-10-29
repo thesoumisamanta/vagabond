@@ -144,6 +144,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       onMessageTap: () {
                         context.push('/chat/user/${user.id}');
                       },
+                      onEditProfileTap: () async {
+                        final updated = await context.push<bool>('/edit-profile');
+                        if (updated == true && context.mounted) {
+                          context.read<SearchBloc>().add(GetUserProfileRequested(id: widget.userId));
+                        }
+                      },
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20.0),

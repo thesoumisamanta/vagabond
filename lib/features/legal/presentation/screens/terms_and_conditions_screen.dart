@@ -5,7 +5,7 @@ import 'package:vagabond/core/di/injection_container.dart';
 import 'package:vagabond/features/legal/presentation/cubit/legal_cubit.dart';
 import 'package:vagabond/features/legal/presentation/cubit/legal_state.dart';
 import 'package:vagabond/features/legal/presentation/widgets/legal_header_info.dart';
-import 'package:vagabond/features/legal/presentation/widgets/legal_list_section.dart';
+import 'package:vagabond/features/legal/presentation/widgets/legal_section_widget.dart';
 import 'package:vagabond/features/legal/presentation/widgets/legal_text_section.dart';
 import 'package:vagabond/core/constants/app_strings.dart';
 
@@ -97,36 +97,24 @@ class TermsAndConditionsScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        LegalHeaderInfo(version: terms.version, effectiveDate: terms.effectiveDate),
-                        const SizedBox(height: 20),
-                        LegalTextSection(
-                          title: AppStrings.legalIntroduction,
-                          icon: Icons.info_outline,
-                          text: terms.content.introduction,
+                        LegalHeaderInfo(
+                          version: terms.version,
+                          effectiveDate: terms.effectiveDate,
+                          lastUpdated: terms.lastUpdated,
                         ),
-                        const SizedBox(height: 20),
-                        LegalListSection(
-                          title: AppStrings.legalUserAccounts,
-                          icon: Icons.person_outline,
-                          items: terms.content.userAccounts,
-                        ),
-                        const SizedBox(height: 20),
-                        LegalListSection(
-                          title: AppStrings.legalContentGuidelines,
-                          icon: Icons.image_outlined,
-                          items: terms.content.contentGuidelines,
-                        ),
-                        const SizedBox(height: 20),
-                        LegalTextSection(
-                          title: AppStrings.legalTermination,
-                          icon: Icons.cancel_outlined,
-                          text: terms.content.termination,
-                        ),
-                        const SizedBox(height: 20),
-                        LegalTextSection(
-                          title: AppStrings.legalGoverningLaw,
-                          icon: Icons.gavel_outlined,
-                          text: terms.content.governingLaw,
+                        if (terms.introduction != null && terms.introduction!.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          LegalTextSection(
+                            title: AppStrings.legalIntroduction,
+                            icon: Icons.info_outline,
+                            text: terms.introduction!,
+                          ),
+                        ],
+                        ...terms.sections.map(
+                          (section) => Padding(
+                            padding: const EdgeInsets.only(top: 20.0),
+                            child: LegalSectionWidget(section: section),
+                          ),
                         ),
                         const SizedBox(height: 24),
                       ],

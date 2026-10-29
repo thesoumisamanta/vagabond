@@ -26,6 +26,11 @@ class AppStrings {
   static const String registerAccountTypeLabel = 'Account Type';
   static const String registerAccountTypePersonal = 'Personal';
   static const String registerAccountTypeBusiness = 'Business';
+  static const String registerAgreeTo = 'I agree to the ';
+  static const String registerTermsAndConditions = 'Terms & Conditions';
+  static const String registerAnd = ' and ';
+  static const String registerPrivacyPolicy = 'Privacy Policy';
+  static const String registerTermsRequired = 'Please accept the Terms & Conditions and Privacy Policy to continue';
   static const String registerButton = 'Register';
   static const String registerAlreadyHaveAccount = 'Already have an account? ';
   static const String registerLoginLink = 'Login';
@@ -219,6 +224,7 @@ class AppStrings {
 
   // Post Strings
   static const String postMaxMediaError = 'You can only add up to 10 media files.';
+  static const String postMaxFileSizeError = 'File size exceeds the 10 MB limit.';
   static const String postCreateTitle = 'Create Post';
   static const String postButton = 'Post';
   static const String postCaptionLabel = 'Caption';

@@ -5,7 +5,7 @@ import 'package:vagabond/core/di/injection_container.dart';
 import 'package:vagabond/features/legal/presentation/cubit/legal_cubit.dart';
 import 'package:vagabond/features/legal/presentation/cubit/legal_state.dart';
 import 'package:vagabond/features/legal/presentation/widgets/legal_header_info.dart';
-import 'package:vagabond/features/legal/presentation/widgets/legal_list_section.dart';
+import 'package:vagabond/features/legal/presentation/widgets/legal_section_widget.dart';
 import 'package:vagabond/features/legal/presentation/widgets/legal_text_section.dart';
 import 'package:vagabond/core/constants/app_strings.dart';
 
@@ -97,30 +97,24 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        LegalHeaderInfo(version: policy.version, effectiveDate: policy.effectiveDate),
-                        const SizedBox(height: 20),
-                        LegalListSection(
-                          title: AppStrings.legalInfoWeCollect,
-                          icon: Icons.assignment_outlined,
-                          items: policy.content.informationCollected,
+                        LegalHeaderInfo(
+                          version: policy.version,
+                          effectiveDate: policy.effectiveDate,
+                          lastUpdated: policy.lastUpdated,
                         ),
-                        const SizedBox(height: 20),
-                        LegalListSection(
-                          title: AppStrings.legalHowWeUseInfo,
-                          icon: Icons.security_outlined,
-                          items: policy.content.howWeUseInformation,
-                        ),
-                        const SizedBox(height: 20),
-                        LegalListSection(
-                          title: AppStrings.legalThirdPartyServices,
-                          icon: Icons.extension_outlined,
-                          items: policy.content.thirdPartyServices,
-                        ),
-                        const SizedBox(height: 20),
-                        LegalTextSection(
-                          title: AppStrings.legalYourDataRights,
-                          icon: Icons.gavel_outlined,
-                          text: policy.content.dataRights,
+                        if (policy.introduction != null && policy.introduction!.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          LegalTextSection(
+                            title: AppStrings.legalIntroduction,
+                            icon: Icons.info_outline,
+                            text: policy.introduction!,
+                          ),
+                        ],
+                        ...policy.sections.map(
+                          (section) => Padding(
+                            padding: const EdgeInsets.only(top: 20.0),
+                            child: LegalSectionWidget(section: section),
+                          ),
                         ),
                         const SizedBox(height: 24),
                       ],

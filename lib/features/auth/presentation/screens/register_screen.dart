@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +29,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _accountType = AppStrings.registerAccountTypePersonal; // Default value
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _agreedToTerms = false;
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsRecognizer = TapGestureRecognizer()
+      ..onTap = () {
+        context.push('/terms-and-conditions');
+      };
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () {
+        context.push('/privacy-policy');
+      };
+  }
 
   @override
   void dispose() {
@@ -36,6 +53,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
     super.dispose();
   }
 
@@ -225,22 +244,139 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               }
                             },
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 20),
+                          FormField<bool>(
+                            initialValue: _agreedToTerms,
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            validator: (value) {
+                              if (!_agreedToTerms) {
+                                return AppStrings.registerTermsRequired;
+                              }
+                              return null;
+                            },
+                            builder: (fieldState) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Theme(
+                                        data: Theme.of(context).copyWith(
+                                          unselectedWidgetColor: Colors.white.withOpacity(0.5),
+                                        ),
+                                        child: Checkbox(
+                                          value: _agreedToTerms,
+                                          activeColor: const Color(0xFF6366F1),
+                                          checkColor: Colors.white,
+                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          visualDensity: VisualDensity.compact,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          side: BorderSide(
+                                            color: fieldState.hasError
+                                                ? Colors.redAccent
+                                                : Colors.white.withOpacity(0.4),
+                                            width: 1.5,
+                                          ),
+                                          onChanged: (value) {
+                                            setState(() {
+                                              _agreedToTerms = value ?? false;
+                                              fieldState.didChange(_agreedToTerms);
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(top: 2.0),
+                                          child: Text.rich(
+                                            TextSpan(
+                                              text: AppStrings.registerAgreeTo,
+                                              style: TextStyle(
+                                                color: Colors.white.withOpacity(0.7),
+                                                fontSize: 13,
+                                                height: 1.4,
+                                              ),
+                                              children: [
+                                                TextSpan(
+                                                  text: AppStrings.registerTermsAndConditions,
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF6366F1),
+                                                    fontWeight: FontWeight.bold,
+                                                    decoration: TextDecoration.underline,
+                                                    decorationColor: Color(0xFF6366F1),
+                                                  ),
+                                                  mouseCursor: SystemMouseCursors.click,
+                                                  recognizer: _termsRecognizer,
+                                                ),
+                                                TextSpan(
+                                                  text: AppStrings.registerAnd,
+                                                  style: TextStyle(
+                                                    color: Colors.white.withOpacity(0.7),
+                                                    fontSize: 13,
+                                                    height: 1.4,
+                                                  ),
+                                                ),
+                                                TextSpan(
+                                                  text: AppStrings.registerPrivacyPolicy,
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF6366F1),
+                                                    fontWeight: FontWeight.bold,
+                                                    decoration: TextDecoration.underline,
+                                                    decorationColor: Color(0xFF6366F1),
+                                                  ),
+                                                  mouseCursor: SystemMouseCursors.click,
+                                                  recognizer: _privacyRecognizer,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (fieldState.hasError)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 36.0, top: 4.0),
+                                      child: Text(
+                                        fieldState.errorText ?? '',
+                                        style: const TextStyle(
+                                          color: Colors.redAccent,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 28),
                           CustomButton(
                             text: AppStrings.registerButton,
                             isLoading: isLoading,
                             onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                context.read<AuthBloc>().add(
-                                  RegisterRequested(
-                                    email: _emailController.text.trim(),
-                                    username: _usernameController.text.trim(),
-                                    password: _passwordController.text.trim(),
-                                    fullName: _fullNameController.text.trim(),
-                                    accountType: _accountType,
-                                  ),
-                                );
+                              final isValid = _formKey.currentState!.validate();
+                              if (!isValid) {
+                                if (!_agreedToTerms) {
+                                  CustomSnackBar.showError(
+                                    context,
+                                    AppStrings.registerTermsRequired,
+                                  );
+                                }
+                                return;
                               }
+                              context.read<AuthBloc>().add(
+                                RegisterRequested(
+                                  email: _emailController.text.trim(),
+                                  username: _usernameController.text.trim(),
+                                  password: _passwordController.text.trim(),
+                                  fullName: _fullNameController.text.trim(),
+                                  accountType: _accountType,
+                                ),
+                              );
                             },
                           ),
                           const SizedBox(height: 24),

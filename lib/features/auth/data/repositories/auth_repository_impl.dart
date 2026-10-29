@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:vagabond/core/network/api_client.dart';
 import 'package:vagabond/core/services/storage_service.dart';
 import 'package:vagabond/features/auth/domain/entities/login_result.dart';
@@ -9,12 +10,18 @@ class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final StorageService storageService;
 
-  AuthRepositoryImpl({required this.remoteDataSource, required this.storageService});
+  AuthRepositoryImpl({
+    required this.remoteDataSource,
+    required this.storageService,
+  });
 
   @override
   Future<LoginResult> login(String emailOrUsername, String password) async {
     try {
-      final response = await remoteDataSource.login(emailOrUsername: emailOrUsername, password: password);
+      final response = await remoteDataSource.login(
+        emailOrUsername: emailOrUsername,
+        password: password,
+      );
 
       final success = response['success'] as bool? ?? false;
       if (success) {
@@ -32,7 +39,8 @@ class AuthRepositoryImpl implements AuthRepository {
           message: response['message'] as String?,
         );
       } else {
-        final requiresVerification = response['requiresVerification'] as bool? ?? false;
+        final requiresVerification =
+            response['requiresVerification'] as bool? ?? false;
         if (requiresVerification) {
           return LoginResult(
             success: false,
@@ -41,10 +49,18 @@ class AuthRepositoryImpl implements AuthRepository {
             message: response['message'] as String?,
           );
         }
-        return LoginResult(success: false, message: response['message'] as String? ?? 'Invalid credentials');
+        return LoginResult(
+          success: false,
+          message: response['message'] as String? ?? 'Invalid credentials',
+        );
       }
     } on RequiresVerificationException catch (e) {
-      return LoginResult(success: false, requiresVerification: true, email: e.email, message: e.message);
+      return LoginResult(
+        success: false,
+        requiresVerification: true,
+        email: e.email,
+        message: e.message,
+      );
     } catch (e) {
       rethrow;
     }
@@ -115,9 +131,15 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<String> changePassword({required String oldPassword, required String newPassword}) async {
+  Future<String> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
     try {
-      final response = await remoteDataSource.changePassword(oldPassword: oldPassword, newPassword: newPassword);
+      final response = await remoteDataSource.changePassword(
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+      );
       return response['message'] as String? ?? 'Password updated successfully';
     } catch (e) {
       rethrow;
@@ -127,9 +149,12 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<String> updatePrivacySettings({required bool isPrivate}) async {
     try {
-      final response = await remoteDataSource.updatePrivacySettings(isPrivate: isPrivate);
+      final response = await remoteDataSource.updatePrivacySettings(
+        isPrivate: isPrivate,
+      );
       await getProfile();
-      return response['message'] as String? ?? 'Account settings updated successfully';
+      return response['message'] as String? ??
+          'Account settings updated successfully';
     } catch (e) {
       rethrow;
     }
@@ -146,9 +171,15 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<String> verifyResetOtp({required String email, required String otp}) async {
+  Future<String> verifyResetOtp({
+    required String email,
+    required String otp,
+  }) async {
     try {
-      final response = await remoteDataSource.verifyResetOtp(email: email, otp: otp);
+      final response = await remoteDataSource.verifyResetOtp(
+        email: email,
+        otp: otp,
+      );
       return response['message'] as String? ?? 'OTP verified successfully';
     } catch (e) {
       rethrow;
@@ -156,10 +187,47 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<String> resetPassword({required String email, required String otp, required String newPassword}) async {
+  Future<String> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
     try {
-      final response = await remoteDataSource.resetPassword(email: email, otp: otp, newPassword: newPassword);
+      final response = await remoteDataSource.resetPassword(
+        email: email,
+        otp: otp,
+        newPassword: newPassword,
+      );
       return response['message'] as String? ?? 'Password reset successfully';
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<User> updateProfile({
+    File? profilePicture,
+    File? coverPhoto,
+    String? fullName,
+    String? bio,
+    String? location,
+    String? website,
+    String? businessEmail,
+    bool? isPrivate,
+  }) async {
+    try {
+      final user = await remoteDataSource.updateProfile(
+        profilePicture: profilePicture,
+        coverPhoto: coverPhoto,
+        fullName: fullName,
+        bio: bio,
+        location: location,
+        website: website,
+        businessEmail: businessEmail,
+        isPrivate: isPrivate,
+      );
+      await storageService.saveUserProfile(user);
+      return user;
     } catch (e) {
       rethrow;
     }

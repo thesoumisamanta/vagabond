@@ -30,7 +30,10 @@ class AuthLoginRequiresVerification extends AuthState {
   final String email;
   final String message;
 
-  const AuthLoginRequiresVerification({required this.email, required this.message});
+  const AuthLoginRequiresVerification({
+    required this.email,
+    required this.message,
+  });
 }
 
 class AuthProfileSuccess extends AuthState {
@@ -63,7 +66,10 @@ class AuthUpdatePrivacySettingsSuccess extends AuthState {
   final String message;
   final bool isPrivate;
 
-  const AuthUpdatePrivacySettingsSuccess({required this.message, required this.isPrivate});
+  const AuthUpdatePrivacySettingsSuccess({
+    required this.message,
+    required this.isPrivate,
+  });
 }
 
 class AuthForgotPasswordSuccess extends AuthState {
@@ -78,11 +84,25 @@ class AuthVerifyResetOtpSuccess extends AuthState {
   final String email;
   final String otp;
 
-  const AuthVerifyResetOtpSuccess({required this.message, required this.email, required this.otp});
+  const AuthVerifyResetOtpSuccess({
+    required this.message,
+    required this.email,
+    required this.otp,
+  });
 }
 
 class AuthResetPasswordSuccess extends AuthState {
   final String message;
 
   const AuthResetPasswordSuccess({required this.message});
+}
+
+class AuthUpdateProfileSuccess extends AuthState {
+  final User user;
+  final String message;
+
+  const AuthUpdateProfileSuccess({
+    required this.user,
+    this.message = 'Profile updated successfully',
+  });
 }

@@ -35,6 +35,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
     super.dispose();
   }
 
+  static const int _maxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+
   Future<void> _pickMedia() async {
     final remaining = 10 - _selectedMedia.length;
     if (remaining <= 0) {
@@ -44,9 +46,27 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
     final picked = await _imagePicker.pickMultiImage(limit: remaining);
     if (picked.isNotEmpty) {
-      setState(() {
-        _selectedMedia.addAll(picked.map((xf) => File(xf.path)));
-      });
+      final validFiles = <File>[];
+      bool fileTooLarge = false;
+
+      for (final xf in picked) {
+        final file = File(xf.path);
+        if (await file.length() > _maxFileSizeBytes) {
+          fileTooLarge = true;
+        } else {
+          validFiles.add(file);
+        }
+      }
+
+      if (fileTooLarge && mounted) {
+        CustomSnackBar.showError(context, AppStrings.postMaxFileSizeError);
+      }
+
+      if (validFiles.isNotEmpty) {
+        setState(() {
+          _selectedMedia.addAll(validFiles);
+        });
+      }
     }
   }
 
@@ -57,10 +77,39 @@ class _AddPostScreenState extends State<AddPostScreen> {
     }
     final picked = await _imagePicker.pickVideo(source: ImageSource.gallery);
     if (picked != null) {
+      final file = File(picked.path);
+      if (await file.length() > _maxFileSizeBytes) {
+        if (mounted) {
+          CustomSnackBar.showError(context, AppStrings.postMaxFileSizeError);
+        }
+        return;
+      }
       setState(() {
-        _selectedMedia.add(File(picked.path));
+        _selectedMedia.add(file);
       });
     }
+  }
+
+  Future<void> _submitPost(BuildContext blocContext) async {
+    for (final file in _selectedMedia) {
+      if (await file.length() > _maxFileSizeBytes) {
+        if (mounted) {
+          CustomSnackBar.showError(context, AppStrings.postMaxFileSizeError);
+        }
+        return;
+      }
+    }
+
+    if (!mounted || !blocContext.mounted) return;
+
+    blocContext.read<PostBloc>().add(
+      CreatePostRequested(
+        media: _selectedMedia,
+        caption: _captionController.text.trim(),
+        location: _locationController.text.trim(),
+        tags: _tagsController.text.trim(),
+      ),
+    );
   }
 
   void _removeMedia(int index) {
@@ -99,18 +148,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
               actions: [
                 if (!isLoading)
                   TextButton(
-                    onPressed: _selectedMedia.isEmpty
-                        ? null
-                        : () {
-                            context.read<PostBloc>().add(
-                              CreatePostRequested(
-                                media: _selectedMedia,
-                                caption: _captionController.text.trim(),
-                                location: _locationController.text.trim(),
-                                tags: _tagsController.text.trim(),
-                              ),
-                            );
-                          },
+                    onPressed: _selectedMedia.isEmpty ? null : () => _submitPost(context),
                     child: Text(
                       AppStrings.postButton,
                       style: TextStyle(

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:vagabond/features/auth/domain/entities/login_result.dart';
 import 'package:vagabond/features/auth/domain/entities/user.dart';
 
@@ -19,4 +20,14 @@ abstract class AuthRepository {
   Future<String> forgotPassword({required String email});
   Future<String> verifyResetOtp({required String email, required String otp});
   Future<String> resetPassword({required String email, required String otp, required String newPassword});
+  Future<User> updateProfile({
+    File? profilePicture,
+    File? coverPhoto,
+    String? fullName,
+    String? bio,
+    String? location,
+    String? website,
+    String? businessEmail,
+    bool? isPrivate,
+  });
 }

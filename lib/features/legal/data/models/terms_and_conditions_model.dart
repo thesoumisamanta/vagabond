@@ -1,19 +1,29 @@
+import 'package:vagabond/features/legal/data/models/legal_section_model.dart';
 import 'package:vagabond/features/legal/domain/entities/terms_and_conditions.dart';
 
 class TermsAndConditionsModel extends TermsAndConditions {
   const TermsAndConditionsModel({
     required super.title,
     required super.effectiveDate,
+    super.lastUpdated,
     required super.version,
-    required super.content,
+    super.introduction,
+    required super.sections,
   });
 
   factory TermsAndConditionsModel.fromJson(Map<String, dynamic> json) {
+    final contentJson = json['content'] as Map<String, dynamic>?;
+    final sectionsJson = json['sections'] as List<dynamic>? ?? [];
+
     return TermsAndConditionsModel(
       title: json['title'] ?? '',
       effectiveDate: json['effectiveDate'] ?? '',
+      lastUpdated: json['lastUpdated'] as String?,
       version: json['version'] ?? '',
-      content: TermsAndConditionsContentModel.fromJson(json['content'] ?? {}),
+      introduction: contentJson?['introduction'] as String?,
+      sections: sectionsJson
+          .map((s) => LegalSectionModel.fromJson(s as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -21,38 +31,14 @@ class TermsAndConditionsModel extends TermsAndConditions {
     return {
       'title': title,
       'effectiveDate': effectiveDate,
+      'lastUpdated': lastUpdated,
       'version': version,
-      'content': (content as TermsAndConditionsContentModel).toJson(),
-    };
-  }
-}
-
-class TermsAndConditionsContentModel extends TermsAndConditionsContent {
-  const TermsAndConditionsContentModel({
-    required super.introduction,
-    required super.userAccounts,
-    required super.contentGuidelines,
-    required super.termination,
-    required super.governingLaw,
-  });
-
-  factory TermsAndConditionsContentModel.fromJson(Map<String, dynamic> json) {
-    return TermsAndConditionsContentModel(
-      introduction: json['introduction'] ?? '',
-      userAccounts: List<String>.from(json['userAccounts'] ?? []),
-      contentGuidelines: List<String>.from(json['contentGuidelines'] ?? []),
-      termination: json['termination'] ?? '',
-      governingLaw: json['governingLaw'] ?? '',
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'introduction': introduction,
-      'userAccounts': userAccounts,
-      'contentGuidelines': contentGuidelines,
-      'termination': termination,
-      'governingLaw': governingLaw,
+      'content': {
+        if (introduction != null) 'introduction': introduction,
+      },
+      'sections': sections
+          .map((s) => (s as LegalSectionModel).toJson())
+          .toList(),
     };
   }
 }
