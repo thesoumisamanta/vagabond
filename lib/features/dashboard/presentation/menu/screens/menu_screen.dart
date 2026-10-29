@@ -44,9 +44,7 @@ class MenuScreen extends StatelessWidget {
                 MenuListItem(
                   icon: Icons.help_outline_rounded,
                   title: AppStrings.menuHelpSupport,
-                  onTap: () {
-                    // Help action
-                  },
+                  onTap: () => context.push('/help-support'),
                 ),
                 _buildDivider(),
                 MenuListItem(

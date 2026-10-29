@@ -16,4 +16,7 @@ abstract class AuthRepository {
   Future<void> deleteAccount({required String password});
   Future<String> changePassword({required String oldPassword, required String newPassword});
   Future<String> updatePrivacySettings({required bool isPrivate});
+  Future<String> forgotPassword({required String email});
+  Future<String> verifyResetOtp({required String email, required String otp});
+  Future<String> resetPassword({required String email, required String otp, required String newPassword});
 }

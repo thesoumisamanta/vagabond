@@ -19,6 +19,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<DeleteAccountRequested>(_onDeleteAccountRequested);
     on<ChangePasswordRequested>(_onChangePasswordRequested);
     on<UpdatePrivacySettingsRequested>(_onUpdatePrivacySettingsRequested);
+    on<ForgotPasswordRequested>(_onForgotPasswordRequested);
+    on<VerifyResetOtpRequested>(_onVerifyResetOtpRequested);
+    on<ResetPasswordRequested>(_onResetPasswordRequested);
   }
 
   Future<void> _onRegisterRequested(RegisterRequested event, Emitter<AuthState> emit) async {
@@ -130,6 +133,40 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         currentUser = currentUser!.copyWith(isPrivate: event.isPrivate);
       }
       emit(AuthUpdatePrivacySettingsSuccess(message: message, isPrivate: event.isPrivate));
+    } catch (e) {
+      emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  Future<void> _onForgotPasswordRequested(ForgotPasswordRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      final message = await authRepository.forgotPassword(email: event.email);
+      emit(AuthForgotPasswordSuccess(message: message, email: event.email));
+    } catch (e) {
+      emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  Future<void> _onVerifyResetOtpRequested(VerifyResetOtpRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      final message = await authRepository.verifyResetOtp(email: event.email, otp: event.otp);
+      emit(AuthVerifyResetOtpSuccess(message: message, email: event.email, otp: event.otp));
+    } catch (e) {
+      emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  Future<void> _onResetPasswordRequested(ResetPasswordRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      final message = await authRepository.resetPassword(
+        email: event.email,
+        otp: event.otp,
+        newPassword: event.newPassword,
+      );
+      emit(AuthResetPasswordSuccess(message: message));
     } catch (e) {
       emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
     }

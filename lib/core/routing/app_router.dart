@@ -10,9 +10,14 @@ import 'package:vagabond/features/auth/presentation/screens/delete_account_scree
 import 'package:vagabond/features/auth/presentation/screens/change_password_screen.dart';
 import 'package:vagabond/features/auth/presentation/screens/settings_screen.dart';
 import 'package:vagabond/features/auth/presentation/screens/privacy_settings_screen.dart';
+import 'package:vagabond/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:vagabond/features/auth/presentation/screens/reset_otp_screen.dart';
+import 'package:vagabond/features/auth/presentation/screens/reset_password_screen.dart';
 import 'package:vagabond/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:vagabond/features/legal/presentation/screens/privacy_policy_screen.dart';
 import 'package:vagabond/features/legal/presentation/screens/terms_and_conditions_screen.dart';
+import 'package:vagabond/features/support/presentation/screens/help_support_screen.dart';
+import 'package:vagabond/features/support/presentation/cubit/support_cubit.dart';
 import 'package:vagabond/features/post/presentation/screens/add_post_screen.dart';
 import 'package:vagabond/features/post/presentation/screens/post_details_screen.dart';
 import 'package:vagabond/features/post/presentation/bloc/post_bloc.dart';
@@ -58,6 +63,13 @@ GoRouter appRouter(FirebaseAnalyticsObserver observer) => GoRouter(
     GoRoute(path: '/privacy-settings', builder: (context, state) => const PrivacySettingsScreen()),
     GoRoute(path: '/privacy-policy', builder: (context, state) => const PrivacyPolicyScreen()),
     GoRoute(path: '/terms-and-conditions', builder: (context, state) => const TermsAndConditionsScreen()),
+    GoRoute(
+      path: '/help-support',
+      builder: (context, state) => BlocProvider<SupportCubit>(
+        create: (context) => sl<SupportCubit>(),
+        child: const HelpSupportScreen(),
+      ),
+    ),
     GoRoute(path: '/add-post', builder: (context, state) => const AddPostScreen()),
     GoRoute(path: '/create-story', builder: (context, state) => const CreateStoryScreen()),
     GoRoute(
@@ -112,5 +124,21 @@ GoRouter appRouter(FirebaseAnalyticsObserver observer) => GoRouter(
       },
     ),
     GoRoute(path: '/notifications', builder: (context, state) => const NotificationScreen()),
+    GoRoute(path: '/forgot-password', builder: (context, state) => const ForgotPasswordScreen()),
+    GoRoute(
+      path: '/reset-otp',
+      builder: (context, state) {
+        final email = state.uri.queryParameters['email'] ?? '';
+        return ResetOtpScreen(email: email);
+      },
+    ),
+    GoRoute(
+      path: '/reset-password',
+      builder: (context, state) {
+        final email = state.uri.queryParameters['email'] ?? '';
+        final otp = state.uri.queryParameters['otp'] ?? '';
+        return ResetPasswordScreen(email: email, otp: otp);
+      },
+    ),
   ],
 );

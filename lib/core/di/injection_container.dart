@@ -13,6 +13,10 @@ import 'package:vagabond/features/legal/data/datasources/legal_remote_datasource
 import 'package:vagabond/features/legal/data/repositories/legal_repository_impl.dart';
 import 'package:vagabond/features/legal/domain/repositories/legal_repository.dart';
 import 'package:vagabond/features/legal/presentation/cubit/legal_cubit.dart';
+import 'package:vagabond/features/support/data/datasources/support_remote_datasource.dart';
+import 'package:vagabond/features/support/data/repositories/support_repository_impl.dart';
+import 'package:vagabond/features/support/domain/repositories/support_repository.dart';
+import 'package:vagabond/features/support/presentation/cubit/support_cubit.dart';
 import 'package:vagabond/features/comment/data/datasources/comment_remote_datasource.dart';
 import 'package:vagabond/features/comment/data/repositories/comment_repository_impl.dart';
 import 'package:vagabond/features/comment/domain/repositories/comment_repository.dart';
@@ -94,6 +98,16 @@ Future<void> initDependencyInjection() async {
 
   // Cubits
   sl.registerFactory<LegalCubit>(() => LegalCubit(legalRepository: sl()));
+
+  // Features - Support
+  // Data sources
+  sl.registerLazySingleton<SupportRemoteDataSource>(() => SupportRemoteDataSourceImpl(apiClient: sl()));
+
+  // Repositories
+  sl.registerLazySingleton<SupportRepository>(() => SupportRepositoryImpl(remoteDataSource: sl()));
+
+  // Cubits
+  sl.registerFactory<SupportCubit>(() => SupportCubit(supportRepository: sl()));
 
   // Features - Post
   // Data sources

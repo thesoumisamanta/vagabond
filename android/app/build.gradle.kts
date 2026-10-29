@@ -41,17 +41,17 @@ android {
         create("dev") {
             dimension = "default"
             resValue("string", "app_name", "Vagabond Dev")
-            buildConfigField("String", "BASE_URL", "\"https://traveldiary.clipboux.online\"")
+            buildConfigField("String", "BASE_URL", "\"https://vagabondapi-dev.clipboux.online\"")
         }
         create("stage") {
             dimension = "default"
             resValue("string", "app_name", "Vagabond Stage")
-            buildConfigField("String", "BASE_URL", "\"https://traveldiary.clipboux.online\"")
+            buildConfigField("String", "BASE_URL", "\"https://vagabondapi-dev.clipboux.online\"")
         }
         create("prod") {
             dimension = "default"
             resValue("string", "app_name", "Vagabond")
-            buildConfigField("String", "BASE_URL", "\"https://traveldiary.clipboux.online\"")
+            buildConfigField("String", "BASE_URL", "\"https://vagabondapi-prod.clipboux.online\"")
         }
     }
 

@@ -65,3 +65,24 @@ class AuthUpdatePrivacySettingsSuccess extends AuthState {
 
   const AuthUpdatePrivacySettingsSuccess({required this.message, required this.isPrivate});
 }
+
+class AuthForgotPasswordSuccess extends AuthState {
+  final String message;
+  final String email;
+
+  const AuthForgotPasswordSuccess({required this.message, required this.email});
+}
+
+class AuthVerifyResetOtpSuccess extends AuthState {
+  final String message;
+  final String email;
+  final String otp;
+
+  const AuthVerifyResetOtpSuccess({required this.message, required this.email, required this.otp});
+}
+
+class AuthResetPasswordSuccess extends AuthState {
+  final String message;
+
+  const AuthResetPasswordSuccess({required this.message});
+}

@@ -18,4 +18,9 @@ class ApiEndpoints {
   static const String updatePrivacySettings = 'users/settings/privacy';
   static const String chats = 'chats';
   static const String notifications = 'notifications';
+  static const String supportContact = 'support/contact';
+  static const String supportTickets = 'support/tickets';
+  static const String forgotPassword = 'auth/forgot-password';
+  static const String verifyResetOtp = 'auth/verify-otp';
+  static const String resetPassword = 'auth/reset-password';
 }

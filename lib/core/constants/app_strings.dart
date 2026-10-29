@@ -43,6 +43,41 @@ class AppStrings {
   static const String loginDontHaveAccount = "Don't have an account? ";
   static const String loginRegisterLink = 'Register';
   static const String loginSuccessMessage = 'Login successful';
+  static const String loginForgotPassword = 'Forgot Password?';
+
+  // Forgot Password Screen Strings
+  static const String forgotPasswordTitle = 'Forgot Password';
+  static const String forgotPasswordHeaderTitle = 'Reset Password';
+  static const String forgotPasswordSubtitle = 'Enter your email address and we\'ll send you a verification code to reset your password.';
+  static const String forgotPasswordEmailLabel = 'Email Address';
+  static const String forgotPasswordEmailHint = 'Enter your email address';
+  static const String forgotPasswordEmailRequired = 'Please enter your email address';
+  static const String forgotPasswordEmailInvalid = 'Please enter a valid email address';
+  static const String forgotPasswordSendOtpButton = 'Send Reset Code';
+
+  // Reset OTP Screen Strings
+  static const String resetOtpTitle = 'Verify Reset Code';
+  static const String resetOtpSubtitlePrefix = 'We sent a 6-digit reset code to\n';
+  static const String resetOtpRequired = 'Please enter the 6-digit code';
+  static const String resetOtpVerifyButton = 'Verify Code';
+  static const String resetOtpDidNotReceive = "Didn't receive the code? ";
+  static const String resetOtpResendLink = 'Resend';
+  static const String resetOtpBackToForgotPassword = 'Back';
+
+  // Reset Password Screen Strings
+  static const String resetPasswordTitle = 'Set New Password';
+  static const String resetPasswordHeaderTitle = 'Create New Password';
+  static const String resetPasswordSubtitle = 'Your new password must be different from your previously used passwords.';
+  static const String resetPasswordNewLabel = 'New Password';
+  static const String resetPasswordNewHint = 'Enter your new password';
+  static const String resetPasswordNewRequired = 'Please enter your new password';
+  static const String resetPasswordNewTooShort = 'Password must be at least 6 characters';
+  static const String resetPasswordConfirmLabel = 'Confirm New Password';
+  static const String resetPasswordConfirmHint = 'Confirm your new password';
+  static const String resetPasswordConfirmRequired = 'Please confirm your new password';
+  static const String resetPasswordPasswordsDoNotMatch = 'Passwords do not match';
+  static const String resetPasswordButton = 'Reset Password';
+  static const String resetPasswordSuccessMessage = 'Password reset successfully. Please login with your new password.';
 
   // OTP Screen Strings
   static const String otpVerifyEmail = 'Verify Email';
@@ -127,6 +162,32 @@ class AppStrings {
   static const String menuLogoutConfirmTitle = 'Logout';
   static const String menuLogoutConfirmMessage = 'Are you sure you want to log out of your account?';
   static const String menuCancel = 'Cancel';
+
+  // Help & Support Strings
+  static const String helpSupportTitle = 'Help & Support';
+  static const String helpSupportHeaderTitle = 'How can we help?';
+  static const String helpSupportSubtitle =
+      'Have questions, feedback, or need assistance? Fill out the form below and our team will get back to you within 24-48 hours.';
+  static const String helpSupportNameLabel = 'Your Name';
+  static const String helpSupportNameHint = 'Enter your full name';
+  static const String helpSupportNameRequired = 'Please enter your name';
+  static const String helpSupportEmailLabel = 'Email Address';
+  static const String helpSupportEmailHint = 'Enter your email address';
+  static const String helpSupportEmailRequired = 'Please enter your email address';
+  static const String helpSupportEmailInvalid = 'Please enter a valid email address';
+  static const String helpSupportSubjectLabel = 'Subject';
+  static const String helpSupportSubjectHint = 'What is this regarding?';
+  static const String helpSupportSubjectRequired = 'Please enter a subject';
+  static const String helpSupportMessageLabel = 'Message';
+  static const String helpSupportMessageHint = 'Describe your issue or feedback in detail...';
+  static const String helpSupportMessageRequired = 'Please enter your message';
+  static const String helpSupportMessageTooShort = 'Message must be at least 5 characters';
+  static const String helpSupportSubmitButton = 'Submit Request';
+  static const String helpSupportSuccessMessage =
+      'Your request has been submitted successfully. We will get back to you shortly.';
+  static const String helpSupportDirectContactTitle = 'Direct Contact';
+  static const String helpSupportEmailAddress = 'support@clipboux.online';
+  static const String helpSupportWebsite = 'https://traveldiary.clipboux.online';
 
   // Dashboard Screen Strings
   static const String dashboardTitle = 'VAGABOND';

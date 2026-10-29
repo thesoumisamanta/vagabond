@@ -58,3 +58,24 @@ class UpdatePrivacySettingsRequested extends AuthEvent {
 
   const UpdatePrivacySettingsRequested({required this.isPrivate});
 }
+
+class ForgotPasswordRequested extends AuthEvent {
+  final String email;
+
+  const ForgotPasswordRequested({required this.email});
+}
+
+class VerifyResetOtpRequested extends AuthEvent {
+  final String email;
+  final String otp;
+
+  const VerifyResetOtpRequested({required this.email, required this.otp});
+}
+
+class ResetPasswordRequested extends AuthEvent {
+  final String email;
+  final String otp;
+  final String newPassword;
+
+  const ResetPasswordRequested({required this.email, required this.otp, required this.newPassword});
+}
