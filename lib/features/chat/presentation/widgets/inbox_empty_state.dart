@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vagabond/core/constants/app_strings.dart';
+import 'package:vagabond/features/chat/presentation/widgets/whatsapp_theme.dart';
 
 class InboxEmptyState extends StatelessWidget {
   const InboxEmptyState({super.key});
@@ -11,8 +11,32 @@ class InboxEmptyState extends StatelessWidget {
       children: [
         SizedBox(
           height: MediaQuery.of(context).size.height * 0.5,
-          child: const Center(
-            child: Text(AppStrings.chatNoConversations, style: TextStyle(color: Colors.white54, fontSize: 16)),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 64,
+                color: WhatsAppTheme.textSecondary.withOpacity(0.5),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No conversations yet',
+                style: TextStyle(
+                  color: WhatsAppTheme.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Tap the chat icon below to start a conversation',
+                style: TextStyle(
+                  color: WhatsAppTheme.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
       ],

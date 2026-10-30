@@ -13,9 +13,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final SocketService socketService;
   final List<StreamSubscription> _subscriptions = [];
 
+  List<Chat> _cachedInboxChats = [];
+
   ChatBloc({required this.chatRepository, required this.socketService}) : super(const ChatInitial()) {
     on<ConnectSocketRequested>(_onConnectSocketRequested);
     on<DisconnectSocketRequested>(_onDisconnectSocketRequested);
+    on<JoinChatRequested>(_onJoinChatRequested);
+    on<LeaveChatRequested>(_onLeaveChatRequested);
     on<GetOrCreateChatRequested>(_onGetOrCreateChatRequested);
     on<GetInboxChatsRequested>(_onGetInboxChatsRequested);
     on<GetChatMessagesRequested>(_onGetChatMessagesRequested);
@@ -26,33 +30,73 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<MarkMessagesReadRequested>(_onMarkMessagesReadRequested);
     on<ReactMessageRequested>(_onReactMessageRequested);
     on<DeleteMessageRequested>(_onDeleteMessageRequested);
+    on<ClearChatRequested>(_onClearChatRequested);
+    on<SearchChatMessagesRequested>(_onSearchChatMessagesRequested);
+    on<ClearSearchRequested>(_onClearSearchRequested);
     on<TypingStatusChanged>(_onTypingStatusChanged);
+    on<CheckUserPresenceRequested>(_onCheckUserPresenceRequested);
 
     // Socket updates
     on<MessageReceived>(_onMessageReceived);
+    on<NewSentMessageReceived>(_onNewSentMessageReceived);
+    on<MessagesDeliveredReceived>(_onMessagesDeliveredReceived);
     on<MessageReadUpdateReceived>(_onMessageReadUpdateReceived);
     on<MessageReactedUpdateReceived>(_onMessageReactedUpdateReceived);
     on<MessageDeletedUpdateReceived>(_onMessageDeletedUpdateReceived);
     on<UserTypingUpdateReceived>(_onUserTypingUpdateReceived);
     on<UserPresenceUpdateReceived>(_onUserPresenceUpdateReceived);
+    on<ChatClearedReceived>(_onChatClearedReceived);
+    on<ChatRequestAcceptedReceived>(_onChatRequestAcceptedReceived);
+    on<ChatRequestDeclinedReceived>(_onChatRequestDeclinedReceived);
+    on<InboxChatsRefreshed>(_onInboxChatsRefreshed);
   }
 
   void _onConnectSocketRequested(ConnectSocketRequested event, Emitter<ChatState> emit) {
     _cancelSubscriptions();
     socketService.connect(event.token);
 
+    // 1. receive_message
     _subscriptions.add(
       socketService.onMessageReceived.listen((data) {
         try {
           final msgJson = data['message'] as Map<String, dynamic>;
+          final chatId = data['chatId'] as String? ?? msgJson['chat'] as String? ?? '';
           final message = MessageModel.fromJson(msgJson);
-          add(MessageReceived(message: message));
+          add(MessageReceived(message: message, chatId: chatId));
         } catch (e) {
           debugPrint('Error parsing received message: $e');
         }
       }),
     );
 
+    // 2. new_sent_message (multi-device sync)
+    _subscriptions.add(
+      socketService.onNewSentMessage.listen((data) {
+        try {
+          final msgJson = data['message'] as Map<String, dynamic>;
+          final chatId = data['chatId'] as String? ?? msgJson['chat'] as String? ?? '';
+          final message = MessageModel.fromJson(msgJson);
+          add(NewSentMessageReceived(message: message, chatId: chatId));
+        } catch (e) {
+          debugPrint('Error parsing new_sent_message: $e');
+        }
+      }),
+    );
+
+    // 3. message_delivered
+    _subscriptions.add(
+      socketService.onMessageDelivered.listen((data) {
+        try {
+          final rawList = data['messages'] as List? ?? [];
+          final delivered = rawList.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+          add(MessagesDeliveredReceived(deliveredMessages: delivered));
+        } catch (e) {
+          debugPrint('Error parsing message_delivered: $e');
+        }
+      }),
+    );
+
+    // 4. messages_read
     _subscriptions.add(
       socketService.onMessagesRead.listen((data) {
         final chatId = data['chatId'] as String? ?? '';
@@ -61,22 +105,27 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }),
     );
 
+    // 5. message_reacted
     _subscriptions.add(
       socketService.onMessageReacted.listen((data) {
         final messageId = data['messageId'] as String? ?? '';
+        final chatId = data['chatId'] as String? ?? '';
         final reactionsList = data['reactions'] as List? ?? [];
         final reactions = reactionsList.map((r) => MessageReactionModel.fromJson(r as Map<String, dynamic>)).toList();
-        add(MessageReactedUpdateReceived(messageId: messageId, reactions: reactions));
+        add(MessageReactedUpdateReceived(messageId: messageId, chatId: chatId, reactions: reactions));
       }),
     );
 
+    // 6. message_deleted
     _subscriptions.add(
       socketService.onMessageDeleted.listen((data) {
         final messageId = data['messageId'] as String? ?? '';
-        add(MessageDeletedUpdateReceived(messageId: messageId));
+        final chatId = data['chatId'] as String? ?? '';
+        add(MessageDeletedUpdateReceived(messageId: messageId, chatId: chatId));
       }),
     );
 
+    // 7. typing & stop_typing
     _subscriptions.add(
       socketService.onUserTyping.listen((data) {
         final chatId = data['chatId'] as String? ?? '';
@@ -93,10 +142,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }),
     );
 
+    // 8. online & offline presence
     _subscriptions.add(
       socketService.onUserOnline.listen((data) {
         final userId = data['userId'] as String? ?? '';
-        add(UserPresenceUpdateReceived(userId: userId, isOnline: true));
+        final lastSeenStr = data['lastSeen'] as String?;
+        final lastSeen = lastSeenStr != null ? DateTime.tryParse(lastSeenStr) : null;
+        add(UserPresenceUpdateReceived(userId: userId, isOnline: true, lastSeen: lastSeen));
       }),
     );
 
@@ -108,11 +160,43 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         add(UserPresenceUpdateReceived(userId: userId, isOnline: false, lastSeen: lastSeen));
       }),
     );
+
+    // 9. chat_cleared
+    _subscriptions.add(
+      socketService.onChatCleared.listen((data) {
+        final chatId = data['chatId'] as String? ?? '';
+        add(ChatClearedReceived(chatId: chatId));
+      }),
+    );
+
+    // 10. chat_request_accepted & declined
+    _subscriptions.add(
+      socketService.onChatRequestAccepted.listen((data) {
+        final chatId = data['chatId'] as String? ?? '';
+        add(ChatRequestAcceptedReceived(chatId: chatId));
+      }),
+    );
+
+    _subscriptions.add(
+      socketService.onChatRequestDeclined.listen((data) {
+        final chatId = data['chatId'] as String? ?? '';
+        add(ChatRequestDeclinedReceived(chatId: chatId));
+      }),
+    );
   }
 
   void _onDisconnectSocketRequested(DisconnectSocketRequested event, Emitter<ChatState> emit) {
     _cancelSubscriptions();
     socketService.disconnect();
+  }
+
+  void _onJoinChatRequested(JoinChatRequested event, Emitter<ChatState> emit) {
+    socketService.joinChat(event.chatId);
+    socketService.markRead(chatId: event.chatId);
+  }
+
+  void _onLeaveChatRequested(LeaveChatRequested event, Emitter<ChatState> emit) {
+    socketService.leaveChat(event.chatId);
   }
 
   Future<void> _onGetOrCreateChatRequested(GetOrCreateChatRequested event, Emitter<ChatState> emit) async {
@@ -126,12 +210,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   Future<void> _onGetInboxChatsRequested(GetInboxChatsRequested event, Emitter<ChatState> emit) async {
-    emit(const ChatLoading());
+    if (_cachedInboxChats.isEmpty) {
+      emit(const ChatLoading());
+    }
     try {
       final chats = await chatRepository.getInboxChats();
+      _cachedInboxChats = chats;
       emit(InboxChatsLoaded(chats: chats));
     } catch (e) {
-      emit(ChatFailure(error: e.toString().replaceAll('Exception: ', '')));
+      if (_cachedInboxChats.isNotEmpty) {
+        emit(InboxChatsLoaded(chats: _cachedInboxChats));
+      } else {
+        emit(ChatFailure(error: e.toString().replaceAll('Exception: ', '')));
+      }
     }
   }
 
@@ -139,80 +230,67 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final currentState = state;
     List<Message> currentMessages = [];
     Map<String, bool> typingUsers = {};
-    Chat? currentChat;
+    Map<String, bool> onlineUsers = {};
+    Map<String, DateTime?> lastSeenUsers = {};
+    Chat? currentChat = event.chat;
 
-    if (event.chat != null) {
-      currentChat = event.chat;
-    } else if (currentState is ChatMessagesLoaded && currentState.chatId == event.chatId) {
-      currentChat = currentState.chat;
-    }
-
-    if (currentState is ChatMessagesLoaded && currentState.chatId == event.chatId && event.page > 1) {
-      currentMessages = currentState.messages;
+    if (currentState is ChatMessagesLoaded && currentState.chatId == event.chatId) {
+      currentChat ??= currentState.chat;
       typingUsers = currentState.typingUsers;
+      onlineUsers = currentState.onlineUsers;
+      lastSeenUsers = currentState.lastSeenUsers;
+      if (event.isLoadMore) {
+        currentMessages = currentState.messages;
+      }
     }
 
-    if (event.page == 1) {
+    if (!event.isLoadMore) {
       emit(const ChatLoading());
+    } else if (currentState is ChatMessagesLoaded) {
+      emit(currentState.copyWith(isLoadingMore: true));
     }
 
     try {
-      if (event.page == 1) {
-        if (currentChat != null) {
-          final messages = await chatRepository.getChatMessages(chatId: event.chatId, page: 1);
-          emit(
-            ChatMessagesLoaded(
-              messages: messages.reversed.toList(),
-              chatId: event.chatId,
-              hasReachedMax: messages.isEmpty,
-              currentPage: 1,
-              typingUsers: typingUsers,
-              chat: currentChat,
-            ),
-          );
-        } else {
-          final results = await Future.wait([
-            chatRepository.getInboxChats(),
-            chatRepository.getChatMessages(chatId: event.chatId, page: 1),
-          ]);
-          final chats = results[0] as List<Chat>;
-          final messages = results[1] as List<Message>;
+      final response = await chatRepository.getChatMessages(
+        chatId: event.chatId,
+        before: event.before,
+        limit: 50,
+      );
 
-          final chat = chats.cast<Chat>().firstWhere(
-            (c) => c.id == event.chatId,
-            orElse: () => Chat(
-              id: event.chatId,
-              participants: const [],
-              status: 'accepted',
-              unreadCount: const {},
-              lastMessageTime: DateTime.now(),
-            ),
-          );
+      // Server returns oldest first. For reversed list, newest first:
+      final fetchedReversed = response.messages.reversed.toList();
 
-          emit(
-            ChatMessagesLoaded(
-              messages: messages.reversed.toList(),
-              chatId: event.chatId,
-              hasReachedMax: messages.isEmpty,
-              currentPage: 1,
-              typingUsers: typingUsers,
-              chat: chat,
-            ),
-          );
-        }
+      List<Message> combinedMessages;
+      if (event.isLoadMore) {
+        // Append older messages to end of the list
+        combinedMessages = [...currentMessages, ...fetchedReversed];
       } else {
-        final messages = await chatRepository.getChatMessages(chatId: event.chatId, page: event.page);
-        emit(
-          ChatMessagesLoaded(
-            messages: [...currentMessages, ...messages.reversed],
-            chatId: event.chatId,
-            hasReachedMax: messages.isEmpty,
-            currentPage: event.page,
-            typingUsers: typingUsers,
-            chat: currentChat,
-          ),
-        );
+        combinedMessages = fetchedReversed;
       }
+
+      // Deduplicate messages by id
+      final seenIds = <String>{};
+      final uniqueMessages = <Message>[];
+      for (final m in combinedMessages) {
+        if (m.id.isNotEmpty && !seenIds.contains(m.id)) {
+          seenIds.add(m.id);
+          uniqueMessages.add(m);
+        }
+      }
+
+      emit(
+        ChatMessagesLoaded(
+          messages: uniqueMessages,
+          chatId: event.chatId,
+          hasReachedMax: !response.hasMore,
+          nextCursor: response.nextCursor,
+          isLoadingMore: false,
+          typingUsers: typingUsers,
+          chat: currentChat,
+          onlineUsers: onlineUsers,
+          lastSeenUsers: lastSeenUsers,
+        ),
+      );
     } catch (e) {
       emit(ChatFailure(error: e.toString().replaceAll('Exception: ', '')));
     }
@@ -222,6 +300,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     socketService.sendMessage(
       chatId: event.chatId,
       text: event.text,
+      replyToId: event.replyToId,
       sharedPostId: event.sharedPostId,
       sharedStoryId: event.sharedStoryId,
       onAck: (ack) {
@@ -229,7 +308,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           try {
             final msgJson = ack['data']['message'] as Map<String, dynamic>;
             final message = MessageModel.fromJson(msgJson);
-            add(MessageReceived(message: message));
+            add(MessageReceived(message: message, chatId: event.chatId));
           } catch (e) {
             debugPrint('Error parsing sent message ack: $e');
           }
@@ -240,8 +319,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   Future<void> _onSendMediaMessageRequested(SendMediaMessageRequested event, Emitter<ChatState> emit) async {
     try {
-      final message = await chatRepository.sendMediaMessage(chatId: event.chatId, media: event.media, text: event.text);
-      add(MessageReceived(message: message));
+      final message = await chatRepository.sendMediaMessage(
+        chatId: event.chatId,
+        media: event.media,
+        text: event.text,
+        replyToId: event.replyToId,
+        messageType: event.messageType,
+      );
+      add(MessageReceived(message: message, chatId: event.chatId));
     } catch (e) {
       emit(ChatFailure(error: e.toString().replaceAll('Exception: ', '')));
     }
@@ -251,6 +336,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       final chat = await chatRepository.acceptMessageRequest(chatId: event.chatId);
       emit(ChatSessionCreated(chat: chat));
+      add(const GetInboxChatsRequested());
     } catch (e) {
       emit(ChatFailure(error: e.toString().replaceAll('Exception: ', '')));
     }
@@ -260,6 +346,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       await chatRepository.declineMessageRequest(chatId: event.chatId);
       emit(const ChatActionSuccess(message: 'Message request declined'));
+      add(const GetInboxChatsRequested());
     } catch (e) {
       emit(ChatFailure(error: e.toString().replaceAll('Exception: ', '')));
     }
@@ -302,34 +389,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             );
           }
 
-          return Message(
-            id: m.id,
-            chatId: m.chatId,
-            sender: m.sender,
-            messageType: m.messageType,
-            text: m.text,
-            media: m.media,
-            sharedPostId: m.sharedPostId,
-            sharedStoryId: m.sharedStoryId,
-            reactions: existingReactions,
-            isRead: m.isRead,
-            isDeleted: m.isDeleted,
-            createdAt: m.createdAt,
-          );
+          return m.copyWith(reactions: existingReactions);
         }
         return m;
       }).toList();
 
-      emit(
-        ChatMessagesLoaded(
-          messages: updatedMessages,
-          chatId: currentState.chatId,
-          hasReachedMax: currentState.hasReachedMax,
-          currentPage: currentState.currentPage,
-          typingUsers: currentState.typingUsers,
-          chat: currentState.chat,
-        ),
-      );
+      emit(currentState.copyWith(messages: updatedMessages));
     }
   }
 
@@ -340,34 +405,49 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (currentState is ChatMessagesLoaded) {
       final updatedMessages = currentState.messages.map((m) {
         if (m.id == event.messageId) {
-          return Message(
-            id: m.id,
-            chatId: m.chatId,
-            sender: m.sender,
-            messageType: m.messageType,
+          return m.copyWith(
             text: 'This message was deleted',
-            media: null,
-            sharedPostId: null,
-            sharedStoryId: null,
-            reactions: const [],
-            isRead: m.isRead,
             isDeleted: true,
-            createdAt: m.createdAt,
+            reactions: const [],
           );
         }
         return m;
       }).toList();
 
-      emit(
-        ChatMessagesLoaded(
-          messages: updatedMessages,
-          chatId: currentState.chatId,
-          hasReachedMax: currentState.hasReachedMax,
-          currentPage: currentState.currentPage,
-          typingUsers: currentState.typingUsers,
-          chat: currentState.chat,
-        ),
-      );
+      emit(currentState.copyWith(messages: updatedMessages));
+    }
+  }
+
+  Future<void> _onClearChatRequested(ClearChatRequested event, Emitter<ChatState> emit) async {
+    try {
+      await chatRepository.clearChatMessages(chatId: event.chatId);
+      final currentState = state;
+      if (currentState is ChatMessagesLoaded && currentState.chatId == event.chatId) {
+        emit(currentState.copyWith(messages: []));
+      }
+      add(const GetInboxChatsRequested());
+    } catch (e) {
+      emit(ChatFailure(error: e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  Future<void> _onSearchChatMessagesRequested(SearchChatMessagesRequested event, Emitter<ChatState> emit) async {
+    final currentState = state;
+    if (currentState is ChatMessagesLoaded) {
+      emit(currentState.copyWith(isSearching: true, searchQuery: event.query));
+      try {
+        final results = await chatRepository.searchChatMessages(chatId: event.chatId, query: event.query);
+        emit(currentState.copyWith(searchResults: results, isSearching: true, searchQuery: event.query));
+      } catch (e) {
+        emit(currentState.copyWith(isSearching: false));
+      }
+    }
+  }
+
+  void _onClearSearchRequested(ClearSearchRequested event, Emitter<ChatState> emit) {
+    final currentState = state;
+    if (currentState is ChatMessagesLoaded) {
+      emit(currentState.copyWith(isSearching: false, searchResults: null, searchQuery: null));
     }
   }
 
@@ -379,23 +459,62 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
+  void _onCheckUserPresenceRequested(CheckUserPresenceRequested event, Emitter<ChatState> emit) {
+    socketService.getUserPresence(
+      targetUserId: event.targetUserId,
+      onAck: (ack) {
+        if (ack['success'] == true && ack['data'] != null) {
+          final data = ack['data'] as Map<String, dynamic>;
+          final isOnline = data['isOnline'] as bool? ?? false;
+          final lastSeenStr = data['lastSeen'] as String?;
+          final lastSeen = lastSeenStr != null ? DateTime.tryParse(lastSeenStr) : null;
+          add(UserPresenceUpdateReceived(userId: event.targetUserId, isOnline: isOnline, lastSeen: lastSeen));
+        }
+      },
+    );
+  }
+
+  // Socket updates handlers
   void _onMessageReceived(MessageReceived event, Emitter<ChatState> emit) {
     final currentState = state;
-    if (currentState is ChatMessagesLoaded && currentState.chatId == event.message.chatId) {
-      // Avoid adding duplicate messages
+    if (currentState is ChatMessagesLoaded && currentState.chatId == event.chatId) {
+      // Deduplicate by _id
       if (currentState.messages.any((m) => m.id == event.message.id)) return;
 
+      // Newest message at index 0 for reversed list
       final updatedMessages = [event.message, ...currentState.messages];
-      emit(
-        ChatMessagesLoaded(
-          messages: updatedMessages,
-          chatId: currentState.chatId,
-          hasReachedMax: currentState.hasReachedMax,
-          currentPage: currentState.currentPage,
-          typingUsers: currentState.typingUsers,
-          chat: currentState.chat,
-        ),
-      );
+      emit(currentState.copyWith(messages: updatedMessages));
+
+      // Mark as read immediately since the chat is open
+      socketService.markRead(chatId: event.chatId);
+    }
+
+    // Update inbox preview if cached
+    _updateInboxWithNewMessage(event.chatId, event.message);
+  }
+
+  void _onNewSentMessageReceived(NewSentMessageReceived event, Emitter<ChatState> emit) {
+    final currentState = state;
+    if (currentState is ChatMessagesLoaded && currentState.chatId == event.chatId) {
+      if (currentState.messages.any((m) => m.id == event.message.id)) return;
+      final updatedMessages = [event.message, ...currentState.messages];
+      emit(currentState.copyWith(messages: updatedMessages));
+    }
+    _updateInboxWithNewMessage(event.chatId, event.message);
+  }
+
+  void _onMessagesDeliveredReceived(MessagesDeliveredReceived event, Emitter<ChatState> emit) {
+    final deliveredIds = event.deliveredMessages.map((m) => m['messageId'] as String? ?? '').toSet();
+    final currentState = state;
+    if (currentState is ChatMessagesLoaded) {
+      final updatedMessages = currentState.messages.map((m) {
+        if (deliveredIds.contains(m.id) && m.status == 'sent') {
+          return m.copyWith(status: 'delivered');
+        }
+        return m;
+      }).toList();
+
+      emit(currentState.copyWith(messages: updatedMessages));
     }
   }
 
@@ -404,34 +523,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (currentState is ChatMessagesLoaded && currentState.chatId == event.chatId) {
       final updatedMessages = currentState.messages.map((m) {
         if (m.sender.id != event.readBy) {
-          return Message(
-            id: m.id,
-            chatId: m.chatId,
-            sender: m.sender,
-            messageType: m.messageType,
-            text: m.text,
-            media: m.media,
-            sharedPostId: m.sharedPostId,
-            sharedStoryId: m.sharedStoryId,
-            reactions: m.reactions,
-            isRead: true,
-            isDeleted: m.isDeleted,
-            createdAt: m.createdAt,
-          );
+          return m.copyWith(status: 'read', isRead: true);
         }
         return m;
       }).toList();
 
-      emit(
-        ChatMessagesLoaded(
-          messages: updatedMessages,
-          chatId: currentState.chatId,
-          hasReachedMax: currentState.hasReachedMax,
-          currentPage: currentState.currentPage,
-          typingUsers: currentState.typingUsers,
-          chat: currentState.chat,
-        ),
-      );
+      emit(currentState.copyWith(messages: updatedMessages));
     }
   }
 
@@ -440,34 +537,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (currentState is ChatMessagesLoaded) {
       final updatedMessages = currentState.messages.map((m) {
         if (m.id == event.messageId) {
-          return Message(
-            id: m.id,
-            chatId: m.chatId,
-            sender: m.sender,
-            messageType: m.messageType,
-            text: m.text,
-            media: m.media,
-            sharedPostId: m.sharedPostId,
-            sharedStoryId: m.sharedStoryId,
-            reactions: event.reactions,
-            isRead: m.isRead,
-            isDeleted: m.isDeleted,
-            createdAt: m.createdAt,
-          );
+          return m.copyWith(reactions: event.reactions);
         }
         return m;
       }).toList();
 
-      emit(
-        ChatMessagesLoaded(
-          messages: updatedMessages,
-          chatId: currentState.chatId,
-          hasReachedMax: currentState.hasReachedMax,
-          currentPage: currentState.currentPage,
-          typingUsers: currentState.typingUsers,
-          chat: currentState.chat,
-        ),
-      );
+      emit(currentState.copyWith(messages: updatedMessages));
     }
   }
 
@@ -476,34 +551,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (currentState is ChatMessagesLoaded) {
       final updatedMessages = currentState.messages.map((m) {
         if (m.id == event.messageId) {
-          return Message(
-            id: m.id,
-            chatId: m.chatId,
-            sender: m.sender,
-            messageType: m.messageType,
+          return m.copyWith(
             text: 'This message was deleted',
-            media: null,
-            sharedPostId: null,
-            sharedStoryId: null,
-            reactions: const [],
-            isRead: m.isRead,
             isDeleted: true,
-            createdAt: m.createdAt,
+            reactions: const [],
           );
         }
         return m;
       }).toList();
 
-      emit(
-        ChatMessagesLoaded(
-          messages: updatedMessages,
-          chatId: currentState.chatId,
-          hasReachedMax: currentState.hasReachedMax,
-          currentPage: currentState.currentPage,
-          typingUsers: currentState.typingUsers,
-          chat: currentState.chat,
-        ),
-      );
+      emit(currentState.copyWith(messages: updatedMessages));
     }
   }
 
@@ -516,62 +573,114 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       } else {
         updatedTypingUsers.remove(event.userId);
       }
-
-      emit(
-        ChatMessagesLoaded(
-          messages: currentState.messages,
-          chatId: currentState.chatId,
-          hasReachedMax: currentState.hasReachedMax,
-          currentPage: currentState.currentPage,
-          typingUsers: updatedTypingUsers,
-          chat: currentState.chat,
-        ),
-      );
+      emit(currentState.copyWith(typingUsers: updatedTypingUsers));
+    } else if (currentState is InboxChatsLoaded) {
+      final updatedTypingChats = Map<String, bool>.from(currentState.typingChats);
+      if (event.isTyping) {
+        updatedTypingChats[event.chatId] = true;
+      } else {
+        updatedTypingChats.remove(event.chatId);
+      }
+      emit(currentState.copyWith(typingChats: updatedTypingChats));
     }
   }
 
   void _onUserPresenceUpdateReceived(UserPresenceUpdateReceived event, Emitter<ChatState> emit) {
     final currentState = state;
     if (currentState is ChatMessagesLoaded) {
-      // Update participant online status if they are in the active chat
-      final updatedMessages = currentState.messages.map((m) {
-        if (m.sender.id == event.userId) {
-          final updatedSender = ChatParticipant(
-            id: m.sender.id,
-            username: m.sender.username,
-            fullName: m.sender.fullName,
-            profilePicture: m.sender.profilePicture,
-            isOnline: event.isOnline,
-            lastSeen: event.lastSeen ?? m.sender.lastSeen,
-          );
-          return Message(
-            id: m.id,
-            chatId: m.chatId,
-            sender: updatedSender,
-            messageType: m.messageType,
-            text: m.text,
-            media: m.media,
-            sharedPostId: m.sharedPostId,
-            sharedStoryId: m.sharedStoryId,
-            reactions: m.reactions,
-            isRead: m.isRead,
-            isDeleted: m.isDeleted,
-            createdAt: m.createdAt,
-          );
-        }
-        return m;
-      }).toList();
+      final updatedOnline = Map<String, bool>.from(currentState.onlineUsers);
+      final updatedLastSeen = Map<String, DateTime?>.from(currentState.lastSeenUsers);
+
+      updatedOnline[event.userId] = event.isOnline;
+      if (event.lastSeen != null) {
+        updatedLastSeen[event.userId] = event.lastSeen;
+      }
+
+      // Also update participant in chat if matched
+      Chat? updatedChat = currentState.chat;
+      if (updatedChat != null) {
+        final updatedParticipants = updatedChat.participants.map((p) {
+          if (p.id == event.userId) {
+            return p.copyWith(
+              isOnline: event.isOnline,
+              lastSeen: event.lastSeen ?? p.lastSeen,
+            );
+          }
+          return p;
+        }).toList();
+        updatedChat = updatedChat.copyWith(participants: updatedParticipants);
+      }
 
       emit(
-        ChatMessagesLoaded(
-          messages: updatedMessages,
-          chatId: currentState.chatId,
-          hasReachedMax: currentState.hasReachedMax,
-          currentPage: currentState.currentPage,
-          typingUsers: currentState.typingUsers,
-          chat: currentState.chat,
+        currentState.copyWith(
+          onlineUsers: updatedOnline,
+          lastSeenUsers: updatedLastSeen,
+          chat: updatedChat,
         ),
       );
+    } else if (currentState is InboxChatsLoaded) {
+      final updatedChats = currentState.chats.map((c) {
+        final updatedParticipants = c.participants.map((p) {
+          if (p.id == event.userId) {
+            return p.copyWith(
+              isOnline: event.isOnline,
+              lastSeen: event.lastSeen ?? p.lastSeen,
+            );
+          }
+          return p;
+        }).toList();
+        return c.copyWith(participants: updatedParticipants);
+      }).toList();
+
+      emit(currentState.copyWith(chats: updatedChats));
+    }
+  }
+
+  void _onChatClearedReceived(ChatClearedReceived event, Emitter<ChatState> emit) {
+    final currentState = state;
+    if (currentState is ChatMessagesLoaded && currentState.chatId == event.chatId) {
+      emit(currentState.copyWith(messages: []));
+    }
+    add(const GetInboxChatsRequested());
+  }
+
+  void _onChatRequestAcceptedReceived(ChatRequestAcceptedReceived event, Emitter<ChatState> emit) {
+    final currentState = state;
+    if (currentState is ChatMessagesLoaded && currentState.chatId == event.chatId && currentState.chat != null) {
+      emit(currentState.copyWith(chat: currentState.chat!.copyWith(status: 'accepted')));
+    }
+    add(const GetInboxChatsRequested());
+  }
+
+  void _onChatRequestDeclinedReceived(ChatRequestDeclinedReceived event, Emitter<ChatState> emit) {
+    final currentState = state;
+    if (currentState is ChatMessagesLoaded && currentState.chatId == event.chatId && currentState.chat != null) {
+      emit(currentState.copyWith(chat: currentState.chat!.copyWith(status: 'declined')));
+    }
+    add(const GetInboxChatsRequested());
+  }
+
+  void _onInboxChatsRefreshed(InboxChatsRefreshed event, Emitter<ChatState> emit) {
+    if (state is InboxChatsLoaded) {
+      emit((state as InboxChatsLoaded).copyWith(chats: event.chats));
+    }
+  }
+
+  void _updateInboxWithNewMessage(String chatId, Message message) {
+    if (_cachedInboxChats.isEmpty) return;
+    final index = _cachedInboxChats.indexWhere((c) => c.id == chatId);
+    if (index != -1) {
+      final existingChat = _cachedInboxChats[index];
+      final updatedChat = existingChat.copyWith(
+        lastMessage: message,
+        lastMessageTime: message.createdAt,
+      );
+      _cachedInboxChats[index] = updatedChat;
+      // Bring to top
+      _cachedInboxChats.removeAt(index);
+      _cachedInboxChats.insert(0, updatedChat);
+
+      add(InboxChatsRefreshed(chats: List.from(_cachedInboxChats)));
     }
   }
 

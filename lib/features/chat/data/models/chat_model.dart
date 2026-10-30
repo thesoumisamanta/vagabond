@@ -92,6 +92,50 @@ class MessageReactionModel extends MessageReaction {
   }
 }
 
+class ReplyMessageModel extends ReplyMessage {
+  const ReplyMessageModel({
+    required super.id,
+    required super.text,
+    required super.messageType,
+    required super.senderUsername,
+    super.senderFullName,
+  });
+
+  factory ReplyMessageModel.fromJson(Map<String, dynamic> json) {
+    String uName = '';
+    String? fName;
+    final senderJson = json['sender'];
+    if (senderJson != null) {
+      if (senderJson is Map<String, dynamic>) {
+        uName = senderJson['username'] as String? ?? '';
+        fName = senderJson['fullName'] as String?;
+      } else if (senderJson is String) {
+        uName = senderJson;
+      }
+    }
+
+    return ReplyMessageModel(
+      id: json['_id'] as String? ?? json['id'] as String? ?? '',
+      text: json['text'] as String? ?? '',
+      messageType: json['messageType'] as String? ?? 'text',
+      senderUsername: uName,
+      senderFullName: fName,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'text': text,
+      'messageType': messageType,
+      'sender': {
+        'username': senderUsername,
+        if (senderFullName != null) 'fullName': senderFullName,
+      },
+    };
+  }
+}
+
 class MessageModel extends Message {
   const MessageModel({
     required super.id,
@@ -106,6 +150,8 @@ class MessageModel extends Message {
     required super.isRead,
     required super.isDeleted,
     required super.createdAt,
+    super.status,
+    super.replyTo,
   });
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
@@ -138,9 +184,18 @@ class MessageModel extends Message {
       parsedMedia = MessageMediaModel.fromJson(mediaJson);
     }
 
+    ReplyMessageModel? parsedReplyTo;
+    final replyToJson = json['replyTo'];
+    if (replyToJson != null && replyToJson is Map<String, dynamic>) {
+      parsedReplyTo = ReplyMessageModel.fromJson(replyToJson);
+    }
+
+    final isRead = json['isRead'] as bool? ?? false;
+    final status = json['status'] as String? ?? (isRead ? 'read' : 'sent');
+
     return MessageModel(
       id: json['_id'] as String? ?? json['id'] as String? ?? '',
-      chatId: json['chat'] as String? ?? '',
+      chatId: json['chat'] as String? ?? (json['chatId'] as String? ?? ''),
       sender: parsedSender,
       messageType: json['messageType'] as String? ?? 'text',
       text: json['text'] as String? ?? '',
@@ -148,9 +203,11 @@ class MessageModel extends Message {
       sharedPostId: json['sharedPostId'] as String?,
       sharedStoryId: json['sharedStoryId'] as String?,
       reactions: parsedReactions,
-      isRead: json['isRead'] as bool? ?? false,
+      isRead: isRead,
       isDeleted: json['isDeleted'] as bool? ?? false,
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now(),
+      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now() : DateTime.now(),
+      status: status,
+      replyTo: parsedReplyTo,
     );
   }
 
@@ -158,16 +215,40 @@ class MessageModel extends Message {
     return {
       '_id': id,
       'chat': chatId,
-      'sender': (sender as ChatParticipantModel).toJson(),
+      'sender': (sender is ChatParticipantModel)
+          ? (sender as ChatParticipantModel).toJson()
+          : {
+              '_id': sender.id,
+              'username': sender.username,
+              'fullName': sender.fullName,
+              'profilePicture': sender.profilePicture,
+              'isOnline': sender.isOnline,
+            },
       'messageType': messageType,
       'text': text,
-      if (media != null) 'media': (media as MessageMediaModel).toJson(),
+      if (media != null)
+        'media': (media is MessageMediaModel)
+            ? (media as MessageMediaModel).toJson()
+            : {'public_id': media!.publicId, 'url': media!.url, 'type': media!.type},
       if (sharedPostId != null) 'sharedPostId': sharedPostId,
       if (sharedStoryId != null) 'sharedStoryId': sharedStoryId,
-      'reactions': reactions.map((r) => (r as MessageReactionModel).toJson()).toList(),
+      'reactions': reactions.map((r) {
+        if (r is MessageReactionModel) return r.toJson();
+        return {'user': {'_id': r.userId, 'username': r.username, 'fullName': r.fullName}, 'emoji': r.emoji};
+      }).toList(),
       'isRead': isRead,
       'isDeleted': isDeleted,
       'createdAt': createdAt.toIso8601String(),
+      'status': status,
+      if (replyTo != null)
+        'replyTo': (replyTo is ReplyMessageModel)
+            ? (replyTo as ReplyMessageModel).toJson()
+            : {
+                '_id': replyTo!.id,
+                'text': replyTo!.text,
+                'messageType': replyTo!.messageType,
+                'sender': {'username': replyTo!.senderUsername, 'fullName': replyTo!.senderFullName},
+              },
     };
   }
 }
@@ -203,7 +284,11 @@ class ChatModel extends Chat {
     final unreadJson = json['unreadCount'];
     if (unreadJson is Map<String, dynamic>) {
       unreadJson.forEach((key, value) {
-        unreadMap[key] = value as int? ?? 0;
+        if (value is num) {
+          unreadMap[key] = value.toInt();
+        } else if (value is String) {
+          unreadMap[key] = int.tryParse(value) ?? 0;
+        }
       });
     }
 
@@ -220,7 +305,7 @@ class ChatModel extends Chat {
       requestedBy: json['requestedBy'] as String?,
       unreadCount: unreadMap,
       lastMessageTime: json['lastMessageTime'] != null
-          ? DateTime.parse(json['lastMessageTime'] as String)
+          ? DateTime.tryParse(json['lastMessageTime'] as String) ?? DateTime.now()
           : DateTime.now(),
       lastMessage: parsedLastMsg,
     );
@@ -229,12 +314,13 @@ class ChatModel extends Chat {
   Map<String, dynamic> toJson() {
     return {
       '_id': id,
-      'participants': participants.map((p) => (p as ChatParticipantModel).toJson()).toList(),
+      'participants': participants.map((p) => (p is ChatParticipantModel) ? p.toJson() : {'_id': p.id}).toList(),
       'status': status,
       if (requestedBy != null) 'requestedBy': requestedBy,
       'unreadCount': unreadCount,
       'lastMessageTime': lastMessageTime.toIso8601String(),
-      if (lastMessage != null) 'lastMessage': (lastMessage as MessageModel).toJson(),
+      if (lastMessage != null)
+        'lastMessage': (lastMessage is MessageModel) ? (lastMessage as MessageModel).toJson() : null,
     };
   }
 }

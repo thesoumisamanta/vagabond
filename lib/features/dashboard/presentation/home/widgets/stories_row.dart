@@ -35,7 +35,7 @@ class StoriesRow extends StatelessWidget {
     }
 
     final hasOwnStories = myUserStory != null && myUserStory.stories.isNotEmpty;
-    final hasUnviewedOwnStories = hasOwnStories && myUserStory!.stories.any((s) => !s.hasViewed);
+    final hasUnviewedOwnStories = hasOwnStories && myUserStory.stories.any((s) => !s.hasViewed);
 
     return Container(
       height: 104,
